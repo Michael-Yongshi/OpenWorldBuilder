@@ -1,7 +1,13 @@
 # Open World Builder
 An application in order to create and manage worldbuilding, characters and storylines.
 
-The desktop frontend for the WAM application, used for Linux and Windows
+- Geography with locations (link to characters and events)
+- Characters (character details, link to other characters and events)
+- Events (link to characters, timelines and locations)
+- character arcs (link to characters and events)
+- timelines
+
+The desktop frontend used for Linux and Windows
 
 ## Release Notes
 ### Release 0
