@@ -108,6 +108,23 @@ class Database(object):
 
     def create_owb_tables(self):
 
+        self.create_table(
+            table="stories",
+            variables=[
+                "title TEXT",
+                "summary TEXT",
+                "body TEXT",
+            ]
+        )
+
+        self.create_table(
+            table="stories_events",
+            variables=[
+                "story_id INTEGER",
+                "event_id INTEGER",
+            ]
+        )
+
         # Event table (start and end are default true, if event is only the start or the end of a persistant event, respectively can be set to false)
         self.create_table(
             table="events", 
@@ -207,19 +224,52 @@ class Database(object):
 def create_test_records(db):
 
     db.create_records(
+        table="stories",
+        variables="title, summary, body",
+        records=[
+            "'0-1', 'prologue', 'Ollie was born at Mambo beach in Curacao, but lost his family in some way'",
+            "'1-1', 'chapter 1 paragraph one', 'Ollie went swimming with the turtles'",
+            "'2-1', 'chapter 2 paragraph one', 'Ollie met Max and played with him at a shipwreck'",
+            "'3-1', 'chapter 3 paragraph one', 'Ollie lost Max and wandered in unknown territory'",
+            "'4-1', 'chapter 4 paragraph one', 'There was a big tremor in the ocean and Ollie heard Max screaming in the distance'",
+            "'4-2', 'chapter 4 paragraph two', 'Max' point of view'",
+            "'5-1', 'chapter 5 paragraph one', 'Ollie and Max are reunited'",
+            "'6-1', 'Epilogue', '3 years later'",
+        ]
+    )
+
+    db.create_records(
+        table="stories_events",
+        variables="story_id, event_id",
+        records=[
+            "1, 1",
+            "1, 2",
+            "2, 3",
+            "3, 4",
+            "3, 5",
+            "4, 6",
+            "5, 7",
+            "6, 7",
+            "7, 8",
+            "8, 4",
+            "8, 6",
+            "8, 7",
+            "8, 8",
+        ]
+    )
+
+    db.create_records(
         table="events",
         variables="intdate, strdate, begin, end, name, description",
         records=[
-            "1, '0000-0-1', 1, 1, 'Creation', 'On the first day god created earth'",
-            "2, '0000-0-2', 1, 1, 'Dogs', 'On the second day he created dogs'",
-            "2, '0000-0-2', 1, 1, 'Cats', 'On the second day he also created cats'",
-            "3, '0000-0-3', 1, 0, 'Armageddon', 'On the third day Armageddon is triggered'",
-            "45, '0000-0-45', 1, 1, 'Bitcoin doubled', 'Bitcoin doubled in price on this day'",
-            "99, '0000-0-99', 0, 1, 'Armageddon', 'On the 99 day Armageddon ends'",
-            "2000, '0000-0-2000', 1, 1, 'Henk meets Casper', 'Henk found Casper in lost cabin'",
-            "2005, '0000-0-2005', 1, 1, 'Henk travels to China', 'Henk travels to China'",
-            "2006, '0000-0-2006', 1, 0, 'Xi becomes ruler of China', 'Xi becomes ruler of China'",
-            "NULL, NULL, 1, 1, 'Draft event', 'Draft event'",
+            "1, '2002-0-1', 1, 1, 'Born', 'Ollie was born'",
+            "50, '2002-2-20', 1, 1, 'Lost', 'Ollie was lost'",
+            "240, '2002-10- ', 1, 1, 'Swimming with turtles', 'Ollie left home for the beach to swim with turtles'",
+            "245.1, '2002-10-20-12:00', 1, 1, 'Met Max', 'Ollie met max'",
+            "245.2, '2002-10-20-15:00', 1, 1, 'Played at shipwreck', 'Played with turtles'",
+            "245.3, '2002-10-20-15:30', 1, 1, 'Got lost', 'Got lost'",
+            "245.4, '2002-10-20-17:00', 1, 1, 'Tremor', 'Tremor'",
+            "245.4, '2002-10-20-17:00', 1, 1, 'Reunited', 'Reunited'",
             ]
     )
     
@@ -227,10 +277,8 @@ def create_test_records(db):
         table="characters",
         variables="name, age, gender, nationality, race",
         records=[
-            "'Henk', 24, 'female', 'German', 'Human'",
-            "'Ollie', 4, 'male', 'Dutch', 'Labrador'",
-            "'Casper', 7846, 'male', 'N/A', 'Ghost'",
-            "'Xi', 50, 'male', 'Chinese', 'Panda'",
+            "'Ollie', 2, 'male', 'Curacaoian', 'Dog'",
+            "'Max', 67, 'male', 'Curacaoian', 'Turtle'",
             ]
     )
 
@@ -238,12 +286,7 @@ def create_test_records(db):
         table="characters_events",
         variables="character_id, event_id",
         records=[
-            "2, 2", # Ollie labrador is created
-            "2, 5", # Ollies became wealthy when bitcoin surged
-            "1, 7", # Henk meets casper
-            "3, 7", # Casper also meets Henk
-            "1, 8", # Henk goes to china
-            "4, 9", # Xi becomes ruler of China
+            ""
             ]
     )
 
