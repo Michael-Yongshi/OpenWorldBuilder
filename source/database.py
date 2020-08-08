@@ -31,6 +31,10 @@ class Database(object):
             if not os.path.exists(path):
                 os.makedirs(path)
 
+            if os.path.exists(os.path.join(path, filename)):
+                print(f"canceling, database already exists")
+                return
+
             self.connection = sqlite3.connect(os.path.join(path, filename + ".sqlite"))
 
             print("Connection to SQLite DB successful")
@@ -38,6 +42,9 @@ class Database(object):
         except Error as e:
 
             print(f"The error '{e}' occurred")
+
+    def delete_database(self):
+        pass
 
     def execute_query(self, query):
         cursor = self.connection.cursor()
@@ -58,6 +65,7 @@ class Database(object):
         try:
             print(query)
             cursor.execute(query)
+            description = cursor.description
             result = cursor.fetchall()
             return result
 
@@ -94,95 +102,124 @@ class Database(object):
         select_records = f"\nSELECT {selection} from {table}"
         records = self.execute_read_query(select_records)
 
+        # print(columns)
         for record in records:
             print(record)
 
-    def delete_database(self):
-        pass
+    def create_owb_tables(self):
 
-def create_owb_tables(db):
+        # Event table (start and end are default true, if event is only the start or the end of a persistant event, respectively can be set to false)
+        self.create_table(
+            table="events", 
+            variables=[
+                "intdate INTEGER",
+                "strdate TEXT",
+                "begin INTEGER NOT NULL",
+                "end INTEGER NOT NULL",
+                "name TEXT NOT NULL",
+                "description TEXT",
+                ]
+            )
 
-    # time table as one to many (one time can have many events, but events only one time)
-    db.create_table(
-        table="time", 
-        variables=[
-            "date INTEGER",
-            "title TEXT",
-            ]
-        )
+        self.create_table(
+            table="locations", 
+            variables=[
+                "name TEXT NOT NULL",
+                "description TEXT",
+                ]
+            )
 
-    # Event table (start and end are default true, if event is only the start or the end of a persistant event, respectively can be set to false)
-    db.create_table(
-        table="events", 
-        variables=[
-            "start BOOL NOT NULL",
-            "end BOOL NOT NULL",
-            "name TEXT NOT NULL",
-            "description TEXT NOT NULL",
-            "time_id INTEGER REFERENCES time (id)",
-            ]
-        )
+        self.create_table(
+            table="locations_events", 
+            variables=[
+                "location_id INTEGER REFERENCES locations (id)",
+                "event_id INTEGER REFERENCES events (id)",
+                ]
+            )
 
-    db.create_table(
-        table="locations", 
-        variables=[
-            "title TEXT NOT NULL",
-            "description TEXT NOT NULL",
-            ]
-        )
+        self.create_table(
+            table="characters", 
+            variables=[
+                "name TEXT NOT NULL",
+                "age INTEGER",
+                "gender TEXT",
+                "nationality TEXT",
+                "race TEXT",
+                ]
+            )
 
-    db.create_table(
-        table="locations_events", 
-        variables=[
-            "location_id INTEGER REFERENCES locations (id)",
-            "event_id INTEGER REFERENCES events (id)",
-            ]
-        )
+        self.create_table(
+            table="characters_events", 
+            variables=[
+                "character_id INTEGER REFERENCES characters (id)",
+                "event_id INTEGER REFERENCES events (id)",
+                ]
+            )
 
-    db.create_table(
-        table="characters", 
-        variables=[
-            "name TEXT NOT NULL",
-            "age INTEGER",
-            "gender TEXT",
-            "nationality TEXT",
-            "race TEXT",
-            ]
-        )
+    def get_event_records(self):
 
-    db.create_table(
-        table="characters_events", 
-        variables=[
-            "character_id INTEGER REFERENCES characters (id)",
-            "event_id INTEGER REFERENCES events (id)",
-            ]
-        )
+        # complete list of events
+        events_query = """
+            SELECT
+            events.id as event_id,
+            events.begin as begin,
+            events.intdate as intdate,
+            events.strdate as date,
+            events.end as end,
+            events.name as event_name,
+            events.description as event_description
+            FROM
+            events
+            """
+
+        events_result = self.execute_read_query(events_query)
+
+        for record in events_result:
+            print(record)
+
+        # info on related characters and locations for the selected event (selected_event)
+        events_all_query = """
+            SELECT
+            events.id as event_id,
+            events.begin as begin,
+            events.end as end,
+            events.intdate as intdate,
+            events.strdate as date,
+            events.name as event_name,
+            events.description as event_description,
+            characters.id as character_id,
+            characters.name as character_name,
+            characters.age as character_age,
+            locations.name as location_name,
+            locations.description as location_description
+            FROM
+            events
+            LEFT JOIN characters_events ON characters_events.event_id = events.id
+            LEFT JOIN characters ON characters_events.character_id = characters.id
+            LEFT JOIN locations_events ON locations_events.event_id = events.id
+            LEFT JOIN locations ON locations_events.location_id = locations.id
+            """
+        events_all_result = self.execute_read_query(events_all_query)
+
+        for record in events_all_result:
+            print(record)
 
 def create_test_records(db):
 
     db.create_records(
-        table="time",
-        variables="date, title",
-        records=[
-            "1, '1-1-0001'",
-            "2, 'first of january year 1'",
-            "3, '1 january 1'",
-            ]
-    )
-
-    db.create_records(
         table="events",
-        variables="start, end, name, description, time_id",
+        variables="intdate, strdate, begin, end, name, description",
         records=[
-            "'true', 'true', 'Creation', 'On the first day god created earth', 1",
-            "'true', 'true', 'Dogs', 'On the second day he created dogs', 2",
-            "'true', 'true', 'Cats', 'On the second day he also created cats', 2",
-            "'true', 'false', 'Armageddon', 'On the third day Armageddon is triggered', 3",
-            "'true', 'true', 'Bitcoin doubled', 'Bitcoin doubled in price on this day', 45",
-            "'false', 'true', 'Armageddon', 'On the 99 day Armageddon ends', 99",
-            "'true', 'true', 'Henk meets Casper', 'Henk found Casper in lost cabin', 2000",
-            "'true', 'true', 'Henk travels to China', 'Henk travels to China', 2005",
-            "'true', 'false', 'Xi becomes ruler of China', 'Xi becomes ruler of China', 2006",
+            "1, '0000-0-1', 1, 1, 'Creation', 'On the first day god created earth'",
+            "2, '0000-0-2', 1, 1, 'Dogs', 'On the second day he created dogs'",
+            "2, '0000-0-2', 1, 1, 'Cats', 'On the second day he also created cats'",
+            "3, '0000-0-3', 1, 0, 'Armageddon', 'On the third day Armageddon is triggered'",
+            "45, '0000-0-45', 1, 1, 'Bitcoin doubled', 'Bitcoin doubled in price on this day'",
+            "99, '0000-0-99', 0, 1, 'Armageddon', 'On the 99 day Armageddon ends'",
+            "2000, '0000-0-2000', 1, 1, 'Henk meets Casper', 'Henk found Casper in lost cabin'",
+            "2005, '0000-0-2005', 1, 1, 'Henk travels to China', 'Henk travels to China'",
+            "2006, '0000-0-2006', 1, 0, 'Xi becomes ruler of China', 'Xi becomes ruler of China'",
+            "NULL, NULL, 1, 1, 'Draft event', 'Draft event'",
             ]
     )
     
@@ -212,11 +249,12 @@ def create_test_records(db):
 
     db.create_records(
         table="locations",
-        variables="title, description",
+        variables="name, description",
         records=[
-            "'China', 'Country in the far east ruled by Panda'",
+            "'China', 'Country in the far east'",
             "'Lost Cabin', 'A lost cabin in the woods'",
             "'Mambo Beach', 'The best beach of Curacao'",
+            "'Global', 'Tag for an event that happens globally",
             ]
     )
 
@@ -224,44 +262,29 @@ def create_test_records(db):
         table="locations_events",
         variables="location_id, event_id",
         records=[
+            "3, 2", # Ollie is created on the beach
             "2, 7", # Henk meets casper
             "1, 8", # Henk goes to china
             "1, 9", # Xi becomes ruler of China
             ]
     )
 
-def get_test_records(db):
-
-    select_time_events = """
-    SELECT
-    time.id,
-    time.date,
-    events.name
-    FROM
-    events
-    INNER JOIN time ON time.id = events.time_id
-    """
-    time_events = db.execute_read_query(select_time_events)
-
-    for time_event in time_events:
-        print(time_event)
-
 
 if __name__ == "__main__":
 
-    print("")
-    db = Database(filename="test")
-    print("")
+    # print("")
+    # db = Database(filename="test")
+    # print("")
 
-    db.create_table()
-    db.create_records()
-    db.read_records()
+    # db.create_table()
+    # db.create_records()
+    # db.read_records()
 
     print("")
     db = Database()
     print("")
 
-    create_owb_tables(db)
+    db.create_owb_tables()
     create_test_records(db)
     db.read_records(table="events")
-    get_test_records(db)
+    db.get_event_records()
