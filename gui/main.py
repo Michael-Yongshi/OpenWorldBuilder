@@ -75,21 +75,6 @@ class WorldOverview(QMainWindow):
 
         self.initUI()
 
-    def initUI(self):
-       
-        # Some window settings
-        self.setWindowTitle('OpenWorldBuilder')
-        self.setWindowIcon(QIcon(os.path.join('source','globe-23544_640.ico')))     
-        
-        # get items from database if there is selected
-        self.get_items()
-
-        # build overview
-        nested_widget = self.set_nested_widget()
-
-        self.setCentralWidget(nested_widget)
-        self.showMaximized()
-
     def set_menu_bar(self):
 
         bar = self.menuBar()
@@ -131,7 +116,34 @@ class WorldOverview(QMainWindow):
         quitButton.triggered.connect(self.close)
         filemenu.addAction(quitButton)
 
-        return bar
+    def initUI(self):
+       
+        # Some window settings
+        self.setWindowTitle('OpenWorldBuilder')
+        self.setWindowIcon(QIcon(os.path.join('source','globe-23544_640.ico')))     
+        
+        # get items from database if there is selected
+        self.get_items()
+
+        # build overview
+        nested_widget = self.set_nested_widget()
+
+        self.setCentralWidget(nested_widget)
+        self.showMaximized()
+
+    def get_items(self):
+
+        self.items = []
+
+        if self.db != None:
+            # print(selected)
+
+            self.items = self.db.read_records(self.menu_active)
+
+            if self.items == []:
+                self.items = ["No records found"]
+            elif self.items == None:
+                self.items = ["table not found"]
 
     def set_nested_widget(self):
 
@@ -155,38 +167,48 @@ class WorldOverview(QMainWindow):
         filenamelabel.setText(f"World openend: {self.filename}")
         selectbox.addWidget(filenamelabel)
 
-        storybtn = QPushButton()
-        storybtn.setText("Story")
-        storybtn.clicked.connect(self.closure_get_items("stories"))
-        selectbox.addWidget(storybtn)
-
-        eventbtn = QPushButton()
-        eventbtn.setText("Events")
-        eventbtn.clicked.connect(self.closure_get_items("events"))
-        selectbox.addWidget(eventbtn)
-
-        timebtn = QPushButton()
-        timebtn.setText("Timelines")
-        timebtn.clicked.connect(self.closure_get_items("times"))
-        selectbox.addWidget(timebtn)
-
-        localebtn = QPushButton()
-        localebtn.setText("Locations")
-        localebtn.clicked.connect(self.closure_get_items("locations"))
-        selectbox.addWidget(localebtn)
-
-        charbtn = QPushButton()
-        charbtn.setText("Characters")
-        charbtn.clicked.connect(self.closure_get_items("characters"))
-        selectbox.addWidget(charbtn)
-
         listwidget = QListWidget()
-
         if self.items != []:
             for record in self.items:
                 listwidget.addItem(QListWidgetItem(f"{record}", listwidget))
-        
-        selectbox.addWidget(listwidget)
+                
+        storybtn = QPushButton()
+        storybtn.setText("Story")
+        storybtn.clicked.connect(self.closure_set_selection("stories"))
+        selectbox.addWidget(storybtn)
+        if self.menu_active == "stories":
+            selectbox.addWidget(listwidget)
+
+        eventbtn = QPushButton()
+        eventbtn.setText("Events")
+        eventbtn.clicked.connect(self.closure_set_selection("events"))
+        selectbox.addWidget(eventbtn)
+        if self.menu_active == "events":
+            selectbox.addWidget(listwidget)
+
+        timebtn = QPushButton()
+        timebtn.setText("Timelines")
+        timebtn.clicked.connect(self.closure_set_selection("time"))
+        selectbox.addWidget(timebtn)
+        if self.menu_active == "time":
+            selectbox.addWidget(listwidget)
+
+        localebtn = QPushButton()
+        localebtn.setText("Locations")
+        localebtn.clicked.connect(self.closure_set_selection("locations"))
+        selectbox.addWidget(localebtn)
+        if self.menu_active == "locations":
+            selectbox.addWidget(listwidget)
+
+        charbtn = QPushButton()
+        charbtn.setText("Characters")
+        charbtn.clicked.connect(self.closure_set_selection("characters"))
+        selectbox.addWidget(charbtn)
+        if self.menu_active == "characters":
+            selectbox.addWidget(listwidget)
+
+        if self.menu_active == None:
+            selectbox.addWidget(listwidget)
 
         newbtn = QPushButton()
         newbtn.setText("+")
@@ -199,7 +221,7 @@ class WorldOverview(QMainWindow):
         # set the list box to fixed horizontal size to avoid filling up the page when latter is empty
         selectboxframe.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
-        return selectboxframe
+        return selectboxframe      
 
     def set_pagebox(self):
 
@@ -296,7 +318,7 @@ class WorldOverview(QMainWindow):
 
                 self.initUI()
 
-    def closure_get_items(self, selected):
+    def closure_set_selection(self, selected):
         
         def set_selection():
             
@@ -305,19 +327,6 @@ class WorldOverview(QMainWindow):
 
         return set_selection
 
-    def get_items(self):
-
-        self.items = []
-
-        if self.db != None:
-            # print(selected)
-
-            self.items = self.db.read_records(self.menu_active)
-
-            if self.items == []:
-                self.items = ["No records found"]
-            elif self.items == None:
-                self.items = ["table not found"]
 
 def run():
     global app
