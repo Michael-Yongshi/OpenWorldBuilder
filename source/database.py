@@ -1,6 +1,9 @@
 import os
-import sqlite3
+from pathlib import Path
 
+from shutil import copyfile
+
+import sqlite3
 from sqlite3 import Error
 
 
@@ -11,6 +14,45 @@ def get_localpath():
     path = os.path.expanduser(local_path)
 
     return path
+
+def show_files(path = ""):
+    """Show all files in a folder"""
+
+    if path == "":
+        path = get_localpath()
+
+    # Create file list
+    filelist = []
+    # check if directory already exists, if not cancel opening
+    if not os.path.exists(path):
+        print(f"couldnt find path: {path}")
+        return filelist
+        
+    # Iterate over sqlite files
+    for filename in os.listdir(path):
+        if filename.endswith(".sqlite"): 
+            name = os.path.splitext(filename)[0]
+            filelist.append(name)
+
+    return path, filelist
+
+def saveas_file(srcfile, dstfile, srcpath = "", dstpath = ""):
+
+    if srcpath == "":
+        srcpath = get_localpath()
+    if dstpath == "":
+        dstpath = get_localpath()
+    
+    src = os.path.join(srcpath, srcfile + ".sqlite")
+    dst = os.path.join(dstpath, dstfile + ".sqlite")
+
+    if os.path.exists(src):
+        if os.path.exists(dst):
+            print(f"error path destination: {dstpath}{dstfile} already exists")
+
+        else:
+            print(f"copying file")
+            copyfile(srcpath, dst)
 
 class Database(object):
 
@@ -31,7 +73,9 @@ class Database(object):
             if not os.path.exists(path):
                 os.makedirs(path)
 
-            if os.path.exists(os.path.join(path, filename)):
+            dst = os.path.join(path, filename + ".sqlite")
+
+            if os.path.exists(dst):
                 print(f"canceling, database already exists")
                 return
 
@@ -220,6 +264,8 @@ class Database(object):
 
         for record in events_all_result:
             print(record)
+
+        return events_result
 
 def create_test_records(db):
 
