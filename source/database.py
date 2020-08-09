@@ -38,10 +38,8 @@ def show_files(path = ""):
 
 def saveas_file(srcfile, dstfile, srcpath = "", dstpath = ""):
 
-    if srcpath == "":
-        srcpath = get_localpath()
-    if dstpath == "":
-        dstpath = get_localpath()
+    srcpath = srcpath if srcpath != "" else get_localpath()
+    dstpath = dstpath if dstpath != "" else get_localpath()
     
     src = os.path.join(srcpath, srcfile + ".sqlite")
     dst = os.path.join(dstpath, dstfile + ".sqlite")
@@ -54,34 +52,42 @@ def saveas_file(srcfile, dstfile, srcpath = "", dstpath = ""):
             print(f"copying file")
             copyfile(srcpath, dst)
 
+def check_existance(filename, path = "", extension = ".sqlite"):
+
+    path = path if path != "" else get_localpath()
+
+    destination = os.path.join(path, filename + extension)
+    if os.path.exists(destination):
+        print(f"destination: {destination} already exists")
+        return True
+    else:
+        return False
+
 class Database(object):
 
     def __init__(self, path = "", filename = ""):
 
         self.connection = None
 
+        if filename == "":
+            filename = "test"
+        self.filename = filename
+
         if path == "":
             path = get_localpath()
-        print(f"database path = {path}")
+        self.path = path
         
-        if filename == "":
-            filename = "owb"
-        print(f"database filename = {filename}")
-
         try:
+            destination = os.path.join(path, filename + ".sqlite")
+
             # check if directory already exists, if not create it
             if not os.path.exists(path):
                 os.makedirs(path)
 
-            dst = os.path.join(path, filename + ".sqlite")
-
-            if os.path.exists(dst):
-                print(f"canceling, database already exists")
-                return
-
-            self.connection = sqlite3.connect(os.path.join(path, filename + ".sqlite"))
-
+            self.connection = sqlite3.connect(destination)
             print("Connection to SQLite DB successful")
+            self.create_owb_tables()
+            print("Created OWB tables")
 
         except Error as e:
 
@@ -145,10 +151,8 @@ class Database(object):
 
         select_records = f"\nSELECT {selection} from {table}"
         records = self.execute_read_query(select_records)
-
-        # print(columns)
-        for record in records:
-            print(record)
+       
+        return records
 
     def create_owb_tables(self):
 
@@ -278,7 +282,7 @@ def create_test_records(db):
             "'2-1', 'chapter 2 paragraph one', 'Ollie met Max and played with him at a shipwreck'",
             "'3-1', 'chapter 3 paragraph one', 'Ollie lost Max and wandered in unknown territory'",
             "'4-1', 'chapter 4 paragraph one', 'There was a big tremor in the ocean and Ollie heard Max screaming in the distance'",
-            "'4-2', 'chapter 4 paragraph two', 'Max' point of view'",
+            "'4-2', 'chapter 4 paragraph two', 'Max point of view'",
             "'5-1', 'chapter 5 paragraph one', 'Ollie and Max are reunited'",
             "'6-1', 'Epilogue', '3 years later'",
         ]
@@ -332,7 +336,7 @@ def create_test_records(db):
         table="characters_events",
         variables="character_id, event_id",
         records=[
-            ""
+            "1, 1",
             ]
     )
 
@@ -343,7 +347,7 @@ def create_test_records(db):
             "'China', 'Country in the far east'",
             "'Lost Cabin', 'A lost cabin in the woods'",
             "'Mambo Beach', 'The best beach of Curacao'",
-            "'Global', 'Tag for an event that happens globally",
+            "'Global', 'Tag for an event that happens globally'",
             ]
     )
 
@@ -375,5 +379,5 @@ if __name__ == "__main__":
 
     db.create_owb_tables()
     create_test_records(db)
-    db.read_records(table="events")
-    db.get_event_records()
+    # db.read_records(table="events")
+    # db.get_event_records()

@@ -37,6 +37,7 @@ from source.database import (
     Database,
     show_files,
     saveas_file,
+    check_existance,
 )
 
 class QMainApplication(QApplication):
@@ -59,9 +60,10 @@ class WorldOverview(QMainWindow):
         self.db = None
         self.filename = None
         self.menu_active = None
+        self.items = []
 
         # set menu bar
-        bar = self.set_menu_bar()
+        self.set_menu_bar()
 
         self.initUI()
 
@@ -142,15 +144,36 @@ class WorldOverview(QMainWindow):
         filenamelabel.setText(f"World openend: {self.filename}")
         listbox.addWidget(filenamelabel)
 
+        storybtn = QPushButton()
+        storybtn.setText("Story")
+        storybtn.clicked.connect(self.closure_get_items("stories"))
+        listbox.addWidget(storybtn)
+
+        eventbtn = QPushButton()
+        eventbtn.setText("Events")
+        eventbtn.clicked.connect(self.closure_get_items("events"))
+        listbox.addWidget(eventbtn)
+
+        timebtn = QPushButton()
+        timebtn.setText("Timelines")
+        timebtn.clicked.connect(self.closure_get_items("time"))
+        listbox.addWidget(timebtn)
+
+        localebtn = QPushButton()
+        localebtn.setText("Locations")
+        localebtn.clicked.connect(self.closure_get_items("locations"))
+        listbox.addWidget(localebtn)
+
+        charbtn = QPushButton()
+        charbtn.setText("Characters")
+        charbtn.clicked.connect(self.closure_get_items("characters"))
+        listbox.addWidget(charbtn)
+
         listwidget = QListWidget()
 
-        if self.db != None:
-            dbresult = []
-            if self.menu_active == "events":
-                dbresult = self.db.get_event_records()
-
-            for record in dbresult:
-                listwidget.addItem(QListWidgetItem(record, listwidget))
+        if self.items != []:
+            for record in self.items:
+                listwidget.addItem(QListWidgetItem(f"{record}", listwidget))
         
         listbox.addWidget(listwidget)
 
@@ -188,6 +211,22 @@ class WorldOverview(QMainWindow):
 
         name, okPressed = QInputDialog.getText(self, "Create", "Name your world:")
         if okPressed and name:
+
+            exists = check_existance(filename=name)
+
+            if exists == False:
+                self.set_database(filename=name)
+            else:
+                QMessageBox.warning(self, "Couldn't create world!", f"database with {name} already exists!", QMessageBox.Ok)
+
+    def open_database(self):
+
+        # get list of save files /databases
+        path, files = show_files()
+
+        # Let user choose out of save files
+        name, okPressed = QInputDialog.getItem(self, "Choose", "Choose your world", files, 0, False)
+        if okPressed and name:
             self.set_database(filename=name)
 
     def save_database(self):
@@ -198,29 +237,44 @@ class WorldOverview(QMainWindow):
         name, okPressed = QInputDialog.getText(self, "Save as...", "Name your new savefile")
         if okPressed and name:
             saveas_file(self.filename, name)
-                
-    def open_database(self):
-
-        # get list of save files /databases
-        path, files = show_files()
-
-        # Let user choose out of save files
-        name, okPressed = QInputDialog.getItem(self, "Choose", "Choose your world", files, 0, False)
-
-        self.set_database(filename=name)
-
+    
     def close_database(self):
         
         self.db = None
         self.filename = None
         self.initUI()
 
-    def set_database(self, filename):
+    def set_database(self, filename, overwrite=False):
 
         self.db = Database(filename=filename)
-        self.filename = filename
+        if self.db.filename == filename:
+            self.filename = filename
+            print(f"opened database with name: {filename}")
+
         self.initUI()
-        print(f"opened database with name: {filename}")
+
+    def closure_get_items(self, selected):
+        
+        def get_items():
+            
+            self.menu_active = selected
+            self.items = []
+
+            if self.db != None:
+                # print(selected)
+
+                self.items = self.db.read_records(selected)
+
+                if self.items == []:
+                    self.items = ["No records found"]
+                elif self.items == None:
+                    self.items = ["table not found"]
+
+                # print(self.items)
+                self.initUI()
+
+        return get_items
+
 
 def run():
     global app
