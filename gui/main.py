@@ -1,4 +1,5 @@
 import sys
+import os
 
 from PyQt5.QtCore import (
     Qt,
@@ -30,28 +31,6 @@ from PyQt5.QtGui import (
     QIcon,
     )
     
-from wamcore.methods_engine import (
-    save_warband,
-    load_warband,
-    show_warbands,
-    save_reference,
-    load_reference,
-    )
-
-from wamcore.class_hierarchy import (
-    Warband,
-    Squad,
-    Character,
-    Hero,
-    Henchman,
-    Rule,
-    Treasury,
-    Item,
-    Skill,
-    Ability,
-    Magic,
-    )
-
 from guidarktheme.widget_template import *
 
 from source.database import (
@@ -90,7 +69,7 @@ class WorldOverview(QMainWindow):
        
         # Some window settings
         self.setWindowTitle('OpenWorldBuilder')
-        self.setWindowIcon(QIcon('globe-23544_640.ico'))     
+        self.setWindowIcon(QIcon(os.path.join('source','globe-23544_640.ico')))     
         
         # build overview
         nested_widget = self.set_nested_widget()
