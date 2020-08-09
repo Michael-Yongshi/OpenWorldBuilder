@@ -67,6 +67,7 @@ class WorldOverview(QMainWindow):
 
         self.db = None
         self.filename = None
+        self.nav_list = [["stories", "Story"],["events", "Event"],["time", "TimeLines"], ["locations", "Locations"],["characters", "Characters"]]
         self.menu_active = None
         self.items = []
 
@@ -171,49 +172,29 @@ class WorldOverview(QMainWindow):
         if self.items != []:
             for record in self.items:
                 listwidget.addItem(QListWidgetItem(f"{record}", listwidget))
-                
-        storybtn = QPushButton()
-        storybtn.setText("Story")
-        storybtn.clicked.connect(self.closure_set_selection("stories"))
-        selectbox.addWidget(storybtn)
-        if self.menu_active == "stories":
-            selectbox.addWidget(listwidget)
 
-        eventbtn = QPushButton()
-        eventbtn.setText("Events")
-        eventbtn.clicked.connect(self.closure_set_selection("events"))
-        selectbox.addWidget(eventbtn)
-        if self.menu_active == "events":
-            selectbox.addWidget(listwidget)
+        for nav_item in self.nav_list:
+            box = QHBoxLayout()
 
-        timebtn = QPushButton()
-        timebtn.setText("Timelines")
-        timebtn.clicked.connect(self.closure_set_selection("time"))
-        selectbox.addWidget(timebtn)
-        if self.menu_active == "time":
-            selectbox.addWidget(listwidget)
+            listbtn = QPushButton()
+            listbtn.setText(nav_item[1])
+            listbtn.clicked.connect(self.closure_set_selection(nav_item[0]))
+            box.addWidget(listbtn, 4)
 
-        localebtn = QPushButton()
-        localebtn.setText("Locations")
-        localebtn.clicked.connect(self.closure_set_selection("locations"))
-        selectbox.addWidget(localebtn)
-        if self.menu_active == "locations":
-            selectbox.addWidget(listwidget)
+            newbtn = QPushButton()
+            newbtn.setText("+")
+            newbtn.clicked.connect(self.closure_new_item(nav_item[0]))
+            box.addWidget(newbtn, 1)
 
-        charbtn = QPushButton()
-        charbtn.setText("Characters")
-        charbtn.clicked.connect(self.closure_set_selection("characters"))
-        selectbox.addWidget(charbtn)
-        if self.menu_active == "characters":
-            selectbox.addWidget(listwidget)
+            frame = QBorderlessFrame()
+            frame.setLayout(box)
+            selectbox.addWidget(frame)
+
+            if self.menu_active == nav_item[0]:
+                selectbox.addWidget(listwidget)
 
         if self.menu_active == None:
             selectbox.addWidget(listwidget)
-
-        newbtn = QPushButton()
-        newbtn.setText("+")
-        newbtn.clicked.connect(self.new_item)
-        selectbox.addWidget(newbtn)
 
         selectboxframe = QRaisedFrame()
         selectboxframe.setLayout(selectbox)
@@ -293,11 +274,15 @@ class WorldOverview(QMainWindow):
 
         self.initUI()
 
-    def new_item(self):
-        if self.menu_active == None:
-            pass
+    def closure_new_item(self, selected):
 
-        else:
+        def new_item():
+            
+            if self.db == None:
+                return
+                
+            self.menu_active = selected
+
             if self.menu_active == "events":
                 dialog = CreateItemDialogEvent()
             elif self.menu_active == "stories":
@@ -317,6 +302,8 @@ class WorldOverview(QMainWindow):
                 # print(self.selected_item)
 
                 self.initUI()
+
+        return new_item
 
     def closure_set_selection(self, selected):
         

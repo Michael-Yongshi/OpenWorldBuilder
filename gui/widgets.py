@@ -6,6 +6,7 @@ from PyQt5.QtCore import (
 from PyQt5.QtWidgets import (
     QAction,
     QApplication,
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -40,8 +41,10 @@ class CreateItemDialogEvent(QDialog):
         self.name = QLineEdit(self)
         self.intdate = QLineEdit(self)
         self.strdate = QLineEdit(self)
-        self.begin = QLineEdit(self)
-        self.end = QLineEdit(self)
+        self.begin = QCheckBox(self)
+        self.begin.setChecked(True)
+        self.end = QCheckBox(self)
+        self.end.setChecked(True)
         self.description = QLineEdit(self)
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
 
@@ -60,7 +63,7 @@ class CreateItemDialogEvent(QDialog):
         buttonBox.rejected.connect(self.reject)
 
     def getInputs(self):
-        newitem = [f"{int(self.intdate.text())}, '{self.strdate.text()}', {int(self.begin.text())}, {int(self.end.text())}, '{self.name.text()}', '{self.description.text()}'"]
+        newitem = [f"{int(self.intdate.text())}, '{self.strdate.text()}', {int(self.begin.isChecked())}, {int(self.end.isChecked())}, '{self.name.text()}', '{self.description.text()}'"]
         return newitem
 
 class CreateItemDialogStory(QDialog):
