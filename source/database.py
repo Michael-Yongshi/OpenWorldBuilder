@@ -5,7 +5,7 @@ from shutil import copyfile
 
 import sqlite3
 from sqlite3 import Error
-
+# https://stackoverflow.com/questions/2047814/is-it-possible-to-store-python-class-objects-in-sqlite
 
 def get_localpath():
     """set the paths to the users documents folder"""
