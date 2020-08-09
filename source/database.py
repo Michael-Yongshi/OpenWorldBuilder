@@ -96,7 +96,7 @@ class Database(object):
     def delete_database(self):
         pass
 
-    def execute_query(self, query):
+    def execute_query_cursor(self, query, read=False):
         cursor = self.connection.cursor()
 
         try:
@@ -105,19 +105,24 @@ class Database(object):
             self.connection.commit()
             print("Query executed successfully")
 
+            if read == True:
+                return cursor
+
         except Error as e:
             print(f"The error '{e}' occurred")
 
-    def execute_read_query(self, query):
+    def execute_query(self, query, read=False):
         cursor = self.connection.cursor()
-        result = None
 
         try:
             print(query)
             cursor.execute(query)
-            description = cursor.description
-            result = cursor.fetchall()
-            return result
+            self.connection.commit()
+            print("Query executed successfully")
+
+            if read == True:
+                data = cursor.fetchall()
+                return data
 
         except Error as e:
             print(f"The error '{e}' occurred")
@@ -137,20 +142,63 @@ class Database(object):
         create_table = f"\nCREATE TABLE IF NOT EXISTS {table}(\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);\n"
         self.execute_query(create_table)
 
-    def create_records(self, table = "test", variables = "integer, text", records = ["1,'test'", "2, 'test'"]):
+    def create_records(self, table = "test", records = ["1,'test'", "2, 'test'"]):
 
+        columns = self.read_column_names(table)
+        
+        variables = ""
+        for column in columns:
+            if column == "id":
+                pass
+            else:
+                variables += f"{column}, "
+
+        variables = variables[:-2]
+        print(variables)
+
+        print(records)
         recordtext = ""
         for record in records:
             recordtext += f"({record}),\n"
         recordtext = recordtext[:-2]
 
         create_record = f"\nINSERT INTO {table}\n({variables})\nVALUES\n{recordtext}\n;\n"
-        self.execute_query(create_record)
+        cursor = self.execute_query_cursor(create_record, read = True)
+
+        return cursor.lastrowid
+
+    def read_table_names(self):
+
+        query = f"SELECT name FROM sqlite_master WHERE type='table';"
+        
+        tables = self.execute_query(query=query, read=True)
+
+        # print(tables)
+        # for table in tables:
+            # print(table)
+
+        return tables
+
+    def read_column_names(self, table = "test"):
+
+        query = f"SELECT * FROM {table};"
+        
+        cursor = self.execute_query_cursor(query=query, read=True)
+        description = cursor.description
+
+        # print(description)
+        columns = []
+        for record in description:
+            # print(record[0])
+            columns += [record[0]]
+        
+        # print(columns)
+        return columns
 
     def read_records(self, table = "test", selection = "*"):
 
         select_records = f"\nSELECT {selection} from {table}"
-        records = self.execute_read_query(select_records)
+        records = self.execute_query(select_records, read=True)
        
         return records
 
@@ -237,7 +285,7 @@ class Database(object):
             events
             """
 
-        events_result = self.execute_read_query(events_query)
+        events_result = self.execute_query(events_query, read=True)
 
         for record in events_result:
             print(record)
@@ -264,7 +312,7 @@ class Database(object):
             LEFT JOIN locations_events ON locations_events.event_id = events.id
             LEFT JOIN locations ON locations_events.location_id = locations.id
             """
-        events_all_result = self.execute_read_query(events_all_query)
+        events_all_result = self.execute_query(events_all_query, read=True)
 
         for record in events_all_result:
             print(record)
@@ -275,7 +323,6 @@ def create_test_records(db):
 
     db.create_records(
         table="stories",
-        variables="title, summary, body",
         records=[
             "'0-1', 'prologue', 'Ollie was born at Mambo beach in Curacao, but lost his family in some way'",
             "'1-1', 'chapter 1 paragraph one', 'Ollie went swimming with the turtles'",
@@ -290,7 +337,6 @@ def create_test_records(db):
 
     db.create_records(
         table="stories_events",
-        variables="story_id, event_id",
         records=[
             "1, 1",
             "1, 2",
@@ -310,7 +356,6 @@ def create_test_records(db):
 
     db.create_records(
         table="events",
-        variables="intdate, strdate, begin, end, name, description",
         records=[
             "1, '2002-0-1', 1, 1, 'Born', 'Ollie was born'",
             "50, '2002-2-20', 1, 1, 'Lost', 'Ollie was lost'",
@@ -325,7 +370,6 @@ def create_test_records(db):
     
     db.create_records(
         table="characters",
-        variables="name, age, gender, nationality, race",
         records=[
             "'Ollie', 2, 'male', 'Curacaoian', 'Dog'",
             "'Max', 67, 'male', 'Curacaoian', 'Turtle'",
@@ -334,7 +378,6 @@ def create_test_records(db):
 
     db.create_records(
         table="characters_events",
-        variables="character_id, event_id",
         records=[
             "1, 1",
             ]
@@ -342,7 +385,6 @@ def create_test_records(db):
 
     db.create_records(
         table="locations",
-        variables="name, description",
         records=[
             "'China', 'Country in the far east'",
             "'Lost Cabin', 'A lost cabin in the woods'",
@@ -353,7 +395,6 @@ def create_test_records(db):
 
     db.create_records(
         table="locations_events",
-        variables="location_id, event_id",
         records=[
             "3, 2", # Ollie is created on the beach
             "2, 7", # Henk meets casper
@@ -381,3 +422,8 @@ if __name__ == "__main__":
     create_test_records(db)
     # db.read_records(table="events")
     # db.get_event_records()
+    db.read_column_names("events")
+    # db.read_column_names("characters")
+    # db.read_column_names("stories")
+    # db.read_column_names("locations")
+    # db.read_column_names("time")

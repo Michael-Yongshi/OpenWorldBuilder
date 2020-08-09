@@ -33,6 +33,14 @@ from PyQt5.QtGui import (
     
 from guidarktheme.widget_template import *
 
+from gui.widgets import (
+    CreateItemDialogEvent,
+    CreateItemDialogStory,
+    CreateItemDialogTime,
+    CreateItemDialogLocation,
+    CreateItemDialogCharacter,
+)
+
 from source.database import (
     Database,
     show_files,
@@ -73,6 +81,9 @@ class WorldOverview(QMainWindow):
         self.setWindowTitle('OpenWorldBuilder')
         self.setWindowIcon(QIcon(os.path.join('source','globe-23544_640.ico')))     
         
+        # get items from database if there is selected
+        self.get_items()
+
         # build overview
         nested_widget = self.set_nested_widget()
 
@@ -127,7 +138,7 @@ class WorldOverview(QMainWindow):
         # vertical layout for left and right part
         overviewbox = QGridLayout()
 
-        overviewbox.addWidget(self.set_listbox(), 0, 0, 3, 1)
+        overviewbox.addWidget(self.set_selectbox(), 0, 0, 3, 1)
         overviewbox.addWidget(self.set_pagebox(), 0, 1, 3, 3)
 
         overviewboxframe = QBorderlessFrame()
@@ -135,39 +146,39 @@ class WorldOverview(QMainWindow):
 
         return overviewboxframe
 
-    def set_listbox(self):
+    def set_selectbox(self):
 
         # vertical layout for left and right part
-        listbox = QVBoxLayout()
+        selectbox = QVBoxLayout()
 
         filenamelabel = QLabel()
         filenamelabel.setText(f"World openend: {self.filename}")
-        listbox.addWidget(filenamelabel)
+        selectbox.addWidget(filenamelabel)
 
         storybtn = QPushButton()
         storybtn.setText("Story")
         storybtn.clicked.connect(self.closure_get_items("stories"))
-        listbox.addWidget(storybtn)
+        selectbox.addWidget(storybtn)
 
         eventbtn = QPushButton()
         eventbtn.setText("Events")
         eventbtn.clicked.connect(self.closure_get_items("events"))
-        listbox.addWidget(eventbtn)
+        selectbox.addWidget(eventbtn)
 
         timebtn = QPushButton()
         timebtn.setText("Timelines")
-        timebtn.clicked.connect(self.closure_get_items("time"))
-        listbox.addWidget(timebtn)
+        timebtn.clicked.connect(self.closure_get_items("times"))
+        selectbox.addWidget(timebtn)
 
         localebtn = QPushButton()
         localebtn.setText("Locations")
         localebtn.clicked.connect(self.closure_get_items("locations"))
-        listbox.addWidget(localebtn)
+        selectbox.addWidget(localebtn)
 
         charbtn = QPushButton()
         charbtn.setText("Characters")
         charbtn.clicked.connect(self.closure_get_items("characters"))
-        listbox.addWidget(charbtn)
+        selectbox.addWidget(charbtn)
 
         listwidget = QListWidget()
 
@@ -175,15 +186,20 @@ class WorldOverview(QMainWindow):
             for record in self.items:
                 listwidget.addItem(QListWidgetItem(f"{record}", listwidget))
         
-        listbox.addWidget(listwidget)
+        selectbox.addWidget(listwidget)
 
-        listboxframe = QRaisedFrame()
-        listboxframe.setLayout(listbox)
+        newbtn = QPushButton()
+        newbtn.setText("+")
+        newbtn.clicked.connect(self.new_item)
+        selectbox.addWidget(newbtn)
+
+        selectboxframe = QRaisedFrame()
+        selectboxframe.setLayout(selectbox)
 
         # set the list box to fixed horizontal size to avoid filling up the page when latter is empty
-        listboxframe.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        selectboxframe.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
-        return listboxframe
+        return selectboxframe
 
     def set_pagebox(self):
 
@@ -237,6 +253,8 @@ class WorldOverview(QMainWindow):
         name, okPressed = QInputDialog.getText(self, "Save as...", "Name your new savefile")
         if okPressed and name:
             saveas_file(self.filename, name)
+
+            # QMessageBox.information(self, "Saved", "Save successful!", QMessageBox.Ok)
     
     def close_database(self):
         
@@ -253,28 +271,53 @@ class WorldOverview(QMainWindow):
 
         self.initUI()
 
-    def closure_get_items(self, selected):
-        
-        def get_items():
-            
-            self.menu_active = selected
-            self.items = []
+    def new_item(self):
+        if self.menu_active == None:
+            pass
 
-            if self.db != None:
-                # print(selected)
+        else:
+            if self.menu_active == "events":
+                dialog = CreateItemDialogEvent()
+            elif self.menu_active == "stories":
+                dialog = CreateItemDialogStory()
+            elif self.menu_active == "time":
+                dialog = CreateItemDialogTime()
+            elif self.menu_active == "locations":
+                dialog = CreateItemDialogLocation()
+            elif self.menu_active == "characters":
+                dialog = CreateItemDialogCharacter()
+            else:
+                return
 
-                self.items = self.db.read_records(selected)
+            if dialog.exec():
+                # QMessageBox.information(self, "New item", f"{dialog.getInputs()}", QMessageBox.Ok)
+                self.selected_item = self.db.create_records(table=self.menu_active, records=dialog.getInputs())
+                # print(self.selected_item)
 
-                if self.items == []:
-                    self.items = ["No records found"]
-                elif self.items == None:
-                    self.items = ["table not found"]
-
-                # print(self.items)
                 self.initUI()
 
-        return get_items
+    def closure_get_items(self, selected):
+        
+        def set_selection():
+            
+            self.menu_active = selected
+            self.initUI()
 
+        return set_selection
+
+    def get_items(self):
+
+        self.items = []
+
+        if self.db != None:
+            # print(selected)
+
+            self.items = self.db.read_records(self.menu_active)
+
+            if self.items == []:
+                self.items = ["No records found"]
+            elif self.items == None:
+                self.items = ["table not found"]
 
 def run():
     global app
