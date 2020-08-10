@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMainWindow,
@@ -68,8 +69,9 @@ class WorldOverview(QMainWindow):
         self.db = None
         self.filename = None
         self.nav_list = [["stories", "Story"],["events", "Event"],["timelines", "TimeLines"], ["locations", "Locations"],["characters", "Characters"]]
-        self.menu_active = None
-        self.items = []
+        self.nav_selected = None
+        self.item_list = []
+        self.item_selected = None
 
         # set menu bar
         self.set_menu_bar()
@@ -82,40 +84,52 @@ class WorldOverview(QMainWindow):
 
         filemenu = bar.addMenu("File")
 
-        newButton = QAction('New', self)
-        newButton.setShortcut('Ctrl+N')
-        newButton.setStatusTip('Create new world')
-        newButton.triggered.connect(self.new_database)
-        filemenu.addAction(newButton)
+        buttons = [
+            {
+                "name": "New",
+                "shortcut": "Ctrl+N",
+                "tooltip": "Create new world",
+                "connect": self.new_database
+            },
+            {
+                "name": "Open",
+                "shortcut": "Ctrl+O",
+                "tooltip": "Open existing world",
+                "connect": self.open_database
+            },
+            {
+                "name": "Save",
+                "shortcut": "Ctrl+S",
+                "tooltip": "Save current world",
+                "connect": self.save_database
+            },
+            {
+                "name": "SaveAs",
+                "shortcut": "",
+                "tooltip": "Save current world as ...",
+                "connect": self.saveas_database
+            },
+            {
+                "name": "Close",
+                "shortcut": "",
+                "tooltip": "Close current world",
+                "connect": self.close_database
+            },
+            {
+                "name": "Quit",
+                "shortcut": "Ctrl+Q",
+                "tooltip": "Quit application",
+                "connect": self.close
+            },
+        ]
 
-        closeButton = QAction('Open', self)
-        closeButton.setShortcut('Ctrl+O')
-        closeButton.setStatusTip('Open existing world')
-        closeButton.triggered.connect(self.open_database)
-        filemenu.addAction(closeButton)
+        for button in buttons:
 
-        saveButton = QAction('Save', self)
-        saveButton.setShortcut('Ctrl+S')
-        saveButton.setStatusTip('Save current world')
-        saveButton.triggered.connect(self.save_database)
-        filemenu.addAction(saveButton)
-
-        saveButton = QAction('Save As ...', self)
-        saveButton.setStatusTip('Save current world')
-        saveButton.triggered.connect(self.saveas_database)
-        filemenu.addAction(saveButton)
-
-        openButton = QAction('Close', self)
-        openButton.setShortcut('Ctrl+C')
-        openButton.setStatusTip('Close current world')
-        openButton.triggered.connect(self.close_database)
-        filemenu.addAction(openButton)
-
-        quitButton = QAction('Quit', self)
-        quitButton.setShortcut('Ctrl+Q')
-        quitButton.setStatusTip('Quit application')
-        quitButton.triggered.connect(self.close)
-        filemenu.addAction(quitButton)
+            btn = QAction(button["name"], self)
+            btn.setShortcut(button["shortcut"])
+            btn.setStatusTip(button["tooltip"])
+            btn.triggered.connect(button["connect"])
+            filemenu.addAction(btn)
 
     def initUI(self):
        
@@ -132,28 +146,12 @@ class WorldOverview(QMainWindow):
         self.setCentralWidget(nested_widget)
         self.showMaximized()
 
-    def get_items(self):
-
-        self.items = []
-
-        print(f"db {self.db}")
-        print(f"menu active {self.menu_active}")
-
-        if self.db != None and self.menu_active != None:
-
-            self.items = self.db.read_records(self.menu_active)
-
-            if self.items == []:
-                self.items = ["No records found"]
-            elif self.items == None:
-                self.items = ["table not found"]
-
     def set_nested_widget(self):
 
         # vertical layout for left and right part
         overviewbox = QGridLayout()
 
-        overviewbox.addWidget(self.set_selectbox(), 0, 0, 3, 1)
+        overviewbox.addWidget(self.set_navbox(), 0, 0, 3, 1)
         overviewbox.addWidget(self.set_pagebox(), 0, 1, 3, 3)
 
         overviewboxframe = QBorderlessFrame()
@@ -161,26 +159,30 @@ class WorldOverview(QMainWindow):
 
         return overviewboxframe
 
-    def set_selectbox(self):
+    def set_navbox(self):
 
         # vertical layout for left and right part
-        selectbox = QVBoxLayout()
+        navbox = QVBoxLayout()
 
         filenamelabel = QLabel()
         filenamelabel.setText(f"World openend: {self.filename}")
-        selectbox.addWidget(filenamelabel)
+        navbox.addWidget(filenamelabel)
 
         listwidget = QListWidget()
-        if self.items != []:
-            for record in self.items:
-                listwidget.addItem(QListWidgetItem(f"{record}", listwidget))
+        if self.item_list != []:
+            for itemdict in self.item_list:
+                name = itemdict["name"]
+                listwidgetitem = QListWidgetItem(f"{name}")
+                listwidgetitem.setData(1, itemdict)
+                listwidget.addItem(listwidgetitem)
+            listwidget.itemClicked.connect(self.set_item_selection)
 
         for nav_item in self.nav_list:
             box = QHBoxLayout()
 
             listbtn = QPushButton()
             listbtn.setText(nav_item[1])
-            listbtn.clicked.connect(self.closure_set_selection(nav_item[0]))
+            listbtn.clicked.connect(self.closure_nav_selection(nav_item[0]))
             box.addWidget(listbtn, 4)
 
             newbtn = QPushButton()
@@ -194,28 +196,37 @@ class WorldOverview(QMainWindow):
 
             frame = QBorderlessFrame()
             frame.setLayout(box)
-            selectbox.addWidget(frame)
+            navbox.addWidget(frame)
 
-            if self.menu_active == nav_item[0]:
-                selectbox.addWidget(listwidget)
+            if self.nav_selected == nav_item[0]:
+                navbox.addWidget(listwidget)
 
-        if self.menu_active == None:
-            selectbox.addWidget(listwidget)
+        if self.nav_selected == None:
+            navbox.addWidget(listwidget)
 
-        selectboxframe = QRaisedFrame()
-        selectboxframe.setLayout(selectbox)
+        navboxframe = QRaisedFrame()
+        navboxframe.setLayout(navbox)
 
         # set the list box to fixed horizontal size to avoid filling up the page when latter is empty
-        selectboxframe.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        navboxframe.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
-        return selectboxframe      
+        return navboxframe      
 
     def set_pagebox(self):
 
         # vertical layout for left and right part
         pagebox = QVBoxLayout()
 
-        # pagebox.addWidget(eventbtn)
+        if self.item_selected != None:
+            for key in self.item_selected.keys():
+                label = QLabel()
+                label.setText(str(self.item_selected[key]))
+                pagebox.addWidget(label)
+
+            btn = QPushButton()
+            btn.setText("Edit")
+            btn.clicked.connect(self.closure_update_item(self.item_selected))
+            pagebox.addWidget(btn)
 
         pageboxframe = QRaisedFrame()
         pageboxframe.setLayout(pagebox)
@@ -276,49 +287,131 @@ class WorldOverview(QMainWindow):
         self.db = Database(filename=filename)
         if self.db.filename == filename:
             self.filename = filename
-            print(f"opened database with name: {filename}")
+            # print(f"opened database with name: {filename}")
 
+        self.initUI()
+
+    def get_items(self):
+
+        self.item_list = []
+
+        if self.db != None and self.nav_selected != None:
+
+            item_list = self.db.read_records(self.nav_selected)
+            # print(item_list)
+
+            column_names = self.db.read_column_names(table=self.nav_selected)
+            # print(f"column names {column_names}")
+
+            self.item_list = []
+            for item in item_list:
+                # print(f"item {item}")
+                itemdict = {}
+                for c in range(len(column_names)):
+                    # print(f"c {c} with column {column_names[c]} and value {item[c]}")
+                    itemdict.update({column_names[c]: item[c]})
+                self.item_list += [itemdict]
+            # print(self.item_list)
+
+            if self.item_list == []:
+                self.item_list = [{"id": 0, "name": "No records found"}]
+            elif self.item_list == None:
+                self.item_list = [{"id": 0, "name": "table not found"}]
+    
+    def closure_nav_selection(self, selected):
+        
+        def nav_selection():
+            
+            self.nav_selected = selected
+            self.initUI()
+
+        return nav_selection
+
+    def set_item_selection(self, item):
+
+        self.item_selected = item.data(1)
         self.initUI()
 
     def closure_new_item(self, selected):
 
         def new_item():
-            
-            if self.db == None:
-                return
                 
-            self.menu_active = selected
+            self.nav_selected = selected
 
-            if self.menu_active == "events":
+            if self.nav_selected == "events":
                 dialog = CreateItemDialogEvent()
-            elif self.menu_active == "stories":
+            elif self.nav_selected == "stories":
                 dialog = CreateItemDialogStory()
-            elif self.menu_active == "timelines":
+            elif self.nav_selected == "timelines":
                 dialog = CreateItemDialogTimeline()
-            elif self.menu_active == "locations":
+            elif self.nav_selected == "locations":
                 dialog = CreateItemDialogLocation()
-            elif self.menu_active == "characters":
+            elif self.nav_selected == "characters":
                 dialog = CreateItemDialogCharacter()
             else:
                 return
 
             if dialog.exec():
-                # QMessageBox.information(self, "New item", f"{dialog.getInputs()}", QMessageBox.Ok)
-                self.selected_item = self.db.create_records(table=self.menu_active, records=dialog.getInputs())
-                # print(self.selected_item)
+                datadict = self.db.create_records(table=self.nav_selected, records=[dialog.getQuery()])
+                self.item_selected = datadict
+                # print(f"created new item in table {self.nav_selected} with id {self.item_selected}")
 
                 self.initUI()
 
         return new_item
 
-    def closure_set_selection(self, selected):
-        
-        def set_selection():
-            
-            self.menu_active = selected
-            self.initUI()
+    def closure_update_item(self, row):
 
-        return set_selection
+        def update_item():
+            
+            if self.nav_selected == "stories":
+                dialog = CreateItemDialogStory()
+
+                dialog.name.setText(self.item_selected["name"])
+                dialog.summary.setText(self.item_selected["summary"])
+                dialog.body.setText(self.item_selected["body"])
+
+            elif self.nav_selected == "events":
+                dialog = CreateItemDialogEvent()
+
+                dialog.name.setText(self.item_selected["name"])
+                dialog.description.setText(self.item_selected["description"])
+                dialog.intdate.setText(str(self.item_selected["intdate"]))
+                dialog.strdate.setText(self.item_selected["strdate"])
+                if self.item_selected["begin"] == 1:
+                    dialog.begin.setChecked(True)
+                else:
+                    dialog.begin.setChecked(False)
+                if self.item_selected["end"] == 1:
+                    dialog.end.setChecked(True)
+                else:
+                    dialog.end.setChecked(False)
+
+            elif self.nav_selected == "timelines":
+                dialog = CreateItemDialogTimeline()
+
+                dialog.name.setText(self.item_selected["name"])
+                
+            elif self.nav_selected == "locations":
+                dialog = CreateItemDialogLocation()
+
+                dialog.name.setText(self.item_selected["name"])
+                
+            elif self.nav_selected == "characters":
+                dialog = CreateItemDialogCharacter()
+
+                dialog.name.setText(self.item_selected["name"])
+                
+            else:
+                return
+
+            if dialog.exec():
+                datadict = self.db.update_record(table=self.nav_selected, values=dialog.getQuery(), row=self.item_selected["id"])
+                self.item_selected = datadict
+                print(f"updated item in table {self.nav_selected} with id {self.item_selected}")
+                self.initUI()
+
+        return update_item
 
 
 def run():

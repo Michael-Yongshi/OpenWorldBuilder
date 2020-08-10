@@ -55,15 +55,15 @@ class CreateItemDialogStory(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getInputs(self):
+    def getQuery(self):
 
-        recordstring = f""
-        
-        recordstring += f"'{self.name.text()}',"
-        recordstring += f"'{self.summary.text()}'," 
-        recordstring += f"'{self.body.text()}'"
+        values = []
 
-        return [recordstring]
+        values += [self.name.text()]
+        values += [self.summary.text()]
+        values += [self.body.text()]
+
+        return values
 
 class CreateItemDialogEvent(QDialog):
     def __init__(self, parent=None):
@@ -97,18 +97,18 @@ class CreateItemDialogEvent(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getInputs(self):
+    def getQuery(self):
 
-        recordstring = f""
+        values = []
 
-        recordstring += f"'{self.name.text()}',"
-        recordstring += f"'{self.description.text()}'," 
-        recordstring += f"{int(self.intdate.text())}," 
-        recordstring += f"'{self.strdate.text()}',"
-        recordstring += f"{int(self.begin.isChecked())},"
-        recordstring += f"{int(self.end.isChecked())}"
+        values += [self.name.text()]
+        values += [self.description.text()]
+        values += [int(self.intdate.text())]
+        values += [self.strdate.text()]
+        values += [int(self.begin.isChecked())]
+        values += [int(self.end.isChecked())]
 
-        return [recordstring]
+        return values
 
 class CreateItemDialogTimeline(QDialog):
     def __init__(self, parent=None):
@@ -132,15 +132,15 @@ class CreateItemDialogTimeline(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getInputs(self):
+    def getQuery(self):
 
-        recordstring = f""
-        
-        recordstring += f"'{self.name.text()}',"
-        recordstring += f"'{self.format.text()}'," 
-        recordstring += f"'{self.description.text()}'"
+        values = []
 
-        return [recordstring]
+        values += [self.name.text()]
+        values += [self.format.text()]
+        values += [self.description.text()]
+
+        return values
 
 class CreateItemDialogLocation(QDialog):
     def __init__(self, parent=None):
@@ -162,14 +162,14 @@ class CreateItemDialogLocation(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getInputs(self):
+    def getQuery(self):
 
-        recordstring = f""
-        
-        recordstring += f"'{self.name.text()}',"
-        recordstring += f"'{self.description.text()}'"
+        values = []
 
-        return [recordstring]
+        values += [self.name.text()]
+        values += [self.description.text()]
+
+        return values
 
 class CreateItemDialogCharacter(QDialog):
     def __init__(self, parent=None):
@@ -198,14 +198,16 @@ class CreateItemDialogCharacter(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getInputs(self):
+    def getInsertQuery(self):
 
-        recordstring = f""
+    def getQuery(self):
 
-        recordstring += f"'{self.name.text()}',"
-        recordstring += f"'{self.age.text()}'," 
-        recordstring += f"'{self.gender.text()}'," 
-        recordstring += f"'{self.nationality.text()}'," 
-        recordstring += f"'{self.race.text()}'" 
+        values = []
 
-        return [recordstring]
+        values += [self.name.text()]
+        values += [self.age.text()]
+        values += [self.gender.text()]
+        values += [self.nationality.text()]
+        values += [self.race.text()]
+
+        return values

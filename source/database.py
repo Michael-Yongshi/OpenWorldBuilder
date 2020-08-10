@@ -142,30 +142,74 @@ class Database(object):
         create_table = f"\nCREATE TABLE IF NOT EXISTS {table}(\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);\n"
         self.execute_query(create_table)
 
-    def create_records(self, table = "test", records = ["1,'test'", "2, 'test'"]):
+    def create_records(self, table = "test", records = [[1,'test'], [2, 'test']]):
 
-        columns = self.read_column_names(table)
+        columns = self.read_column_names(table)[1:]
+        # print(f"columns of table {table} are {columns}")
+        column_count = len(columns)
+        # print(f"column count = {column_count}")
         
-        variables = ""
-        for column in columns:
-            if column == "id":
-                pass
-            else:
-                variables += f"{column}, "
+        column_text = ""
+        for i in range(column_count):
+            column_text += f"{columns[i]},"
+        column_text = column_text[:-1]
+        # print(column_text)
 
-        variables = variables[:-2]
-        print(variables)
-
-        print(records)
-        recordtext = ""
+        # print(records)  
+        records_text = ""
         for record in records:
-            recordtext += f"({record}),\n"
-        recordtext = recordtext[:-2]
 
-        create_record = f"\nINSERT INTO {table}\n({variables})\nVALUES\n{recordtext}\n;\n"
+            record_text = ""
+            for i in range(column_count):
+                if isinstance(record[i], str):
+                    record_text += f"'{record[i]}', "
+                else:
+                    record_text += f"{record[i]}, "
+                # print(f"i = {i} with {record_text}")
+            record_text = record_text[:-2]
+            # print(f"record text = {record_text}")
+
+            records_text += f"({record_text}),"
+            # print(records_text)
+        records_text = records_text[:-1]
+        # print(records_text)
+
+        create_record = f"\nINSERT INTO {table}\n({column_text})\nVALUES\n{records_text}\n;\n"
         cursor = self.execute_query_cursor(create_record, read = True)
 
-        return cursor.lastrowid
+        datadict = {
+            "id": cursor.lastrowid
+        }
+
+        return datadict
+
+    def update_record(self, table = "test", values = [3,'test'], row= 1):
+
+        columns = self.read_column_names(table)[1:]
+        # print(f"columns of table {table} are {columns}")
+        column_count = len(columns)
+        # print(f"column count = {column_count}")
+        
+        setvalues = ""
+        for i in range(column_count):
+            if isinstance(values[i], str):
+                setvalues += f"{columns[i]} = '{values[i]}',\n"
+            else:
+                setvalues += f"{columns[i]} = {values[i]},\n"
+            
+        setvalues = setvalues[:-2]
+        # print(f"setvalues {setvalues}")
+
+        update_record = f"\nUPDATE {table} SET\n{setvalues}\nWHERE\n{table}.id = {row}\n;\n"
+        cursor = self.execute_query_cursor(update_record, read = True)
+
+        if cursor != None:
+            datadict = {
+                "id": row
+            }
+            # print(datadict)
+
+            return datadict
 
     def read_table_names(self):
 
@@ -341,95 +385,95 @@ def create_test_records(db):
     db.create_records(
         table="stories",
         records=[
-            "'0-1', 'prologue', 'Ollie was born at Mambo beach in Curacao, but lost his family in some way'",
-            "'1-1', 'chapter 1 paragraph one', 'Ollie went swimming with the turtles'",
-            "'2-1', 'chapter 2 paragraph one', 'Ollie met Max and played with him at a shipwreck'",
-            "'3-1', 'chapter 3 paragraph one', 'Ollie lost Max and wandered in unknown territory'",
-            "'4-1', 'chapter 4 paragraph one', 'There was a big tremor in the ocean and Ollie heard Max screaming in the distance'",
-            "'4-2', 'chapter 4 paragraph two', 'Max point of view'",
-            "'5-1', 'chapter 5 paragraph one', 'Ollie and Max are reunited'",
-            "'6-1', 'Epilogue', '3 years later'",
+            ['0-1', 'prologue', 'Ollie was born at Mambo beach in Curacao, but lost his family in some way'],
+            ['1-1', 'chapter 1 paragraph one', 'Ollie went swimming with the turtles'],
+            ['2-1', 'chapter 2 paragraph one', 'Ollie met Max and played with him at a shipwreck'],
+            ['3-1', 'chapter 3 paragraph one', 'Ollie lost Max and wandered in unknown territory'],
+            ['4-1', 'chapter 4 paragraph one', 'There was a big tremor in the ocean and Ollie heard Max screaming in the distance'],
+            ['4-2', 'chapter 4 paragraph two', 'Max point of view'],
+            ['5-1', 'chapter 5 paragraph one', 'Ollie and Max are reunited'],
+            ['6-1', 'Epilogue', '3 years later'],
         ]
     )
 
     db.create_records(
         table="stories_events",
         records=[
-            "1, 1",
-            "1, 2",
-            "2, 3",
-            "3, 4",
-            "3, 5",
-            "4, 6",
-            "5, 7",
-            "6, 7",
-            "7, 8",
-            "8, 4",
-            "8, 6",
-            "8, 7",
-            "8, 8",
+            [1, 1],
+            [1, 2],
+            [2, 3],
+            [3, 4],
+            [3, 5],
+            [4, 6],
+            [5, 7],
+            [6, 7],
+            [7, 8],
+            [8, 4],
+            [8, 6],
+            [8, 7],
+            [8, 8],
         ]
     )
 
     db.create_records(
         table="events",
         records=[
-            "'Born', 'Ollie was born', 1, '2002-0-1', 1, 1",
-            "'Lost', 'Ollie was lost', 50, '2002-2-20', 1, 1",
-            "'Swimming with turtles', 'Ollie left home for the beach to swim with turtles', 240, '2002-10- ', 1, 1",
-            "'Met Max', 'Ollie met max', 245.1, '2002-10-20-12:00', 1, 1",
-            "'Played at shipwreck', 'Played with turtles', 245.2, '2002-10-20-15:00', 1, 1",
-            "'Got lost', 'Got lost', 245.3, '2002-10-20-15:30', 1, 1",
-            "'Tremor', 'Tremor', 245.4, '2002-10-20-17:00', 1, 1",
-            "'Reunited', 'Reunited', 245.4, '2002-10-20-17:00', 1, 1",
+            ['Born', 'Ollie was born', 1, '2002-0-1', 1, 1],
+            ['Lost', 'Ollie was lost', 50, '2002-2-20', 1, 1],
+            ['Swimming with turtles', 'Ollie left home for the beach to swim with turtles', 240, '2002-10- ', 1, 1],
+            ['Met Max', 'Ollie met max', 245.1, '2002-10-20-12:00', 1, 1],
+            ['Played at shipwreck', 'Played with turtles', 245.2, '2002-10-20-15:00', 1, 1],
+            ['Got lost', 'Got lost', 245.3, '2002-10-20-15:30', 1, 1],
+            ['Tremor', 'Tremor', 245.4, '2002-10-20-17:00', 1, 1],
+            ['Reunited', 'Reunited', 245.4, '2002-10-20-17:00', 1, 1],
             ]
     )
     
     db.create_records(
         table="timelines",
         records=[
-            "'Geography', '', 'Geographical Timeline, i.e. for events like the weather or more generic events'",
-            "'Relational', '', 'Relational Timeline, i.e. for events like characters meeting up or have an important conversation'",
-            "'Cultural', '', 'Cultural Timeline, i.e. for events like introduction of a new tradition'",
-            "'Religion', '', 'Religious Timeline, i.e. for events of a religious nature'",
-            "'Political', '', 'Political Timeline, i.e. for events like a new empire is established'",
-            "'Economic', '', 'Economic Timeline, i.e. for events like a stock market crash'",
-            "'Technology', '', 'Technology Timeline, i.e. for events like invention of new tech'",
+            ['Geography', '', 'Geographical Timeline, i.e. for events like the weather or more generic events'],
+            ['Relational', '', 'Relational Timeline, i.e. for events like characters meeting up or have an important conversation'],
+            ['Cultural', '', 'Cultural Timeline, i.e. for events like introduction of a new tradition'],
+            ['Religion', '', 'Religious Timeline, i.e. for events of a religious nature'],
+            ['Political', '', 'Political Timeline, i.e. for events like a new empire is established'],
+            ['Economic', '', 'Economic Timeline, i.e. for events like a stock market crash'],
+            ['Technology', '', 'Technology Timeline, i.e. for events like invention of new tech'],
         ]
     )
 
     db.create_records(
         table="characters",
         records=[
-            "'Ollie', 2, 'male', 'Curacaoian', 'Dog'",
-            "'Max', 67, 'male', 'Curacaoian', 'Turtle'",
+            ['Ollie', 2, 'male', 'Curacaoian', 'Dog'],
+            ['Max', 67, 'male', 'Curacaoian', 'Turtle'],
             ]
     )
 
     db.create_records(
         table="characters_events",
         records=[
-            "1, 1",
+            [1, 1],
             ]
     )
 
     db.create_records(
         table="locations",
         records=[
-            "'China', 'Country in the far east'",
-            "'Lost Cabin', 'A lost cabin in the woods'",
-            "'Mambo Beach', 'The best beach of Curacao'",
-            "'Global', 'Tag for an event that happens globally'",
+            ['China', 'Country in the far east'],
+            ['Lost Cabin', 'A lost cabin in the woods'],
+            ['Mambo Beach', 'The best beach of Curacao'],
+            ['Global', 'Tag for an event that happens globally'],
             ]
     )
 
     db.create_records(
         table="locations_events",
         records=[
-            "3, 2", # Ollie is created on the beach
-            "2, 7", # Henk meets casper
-            "1, 8", # Henk goes to china
-            "1, 9", # Xi becomes ruler of China
+            [3, 2], # Ollie is created on the beach
+            [2, 7], # Henk meets casper
+            [1, 8], # Henk goes to china
+            [1, 9], # Xi becomes ruler of China
             ]
     )
 
@@ -457,3 +501,4 @@ if __name__ == "__main__":
     # db.read_column_names("stories")
     # db.read_column_names("locations")
     # db.read_column_names("timeline")
+    db.update_record("events", values=['NeverBorn', 'Ollie was never born', 1, '2002-0-1', 1, 1], row = 1)
