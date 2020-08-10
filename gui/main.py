@@ -36,7 +36,7 @@ from guidarktheme.widget_template import *
 from gui.widgets import (
     CreateItemDialogEvent,
     CreateItemDialogStory,
-    CreateItemDialogTime,
+    CreateItemDialogTimeline,
     CreateItemDialogLocation,
     CreateItemDialogCharacter,
 )
@@ -67,7 +67,7 @@ class WorldOverview(QMainWindow):
 
         self.db = None
         self.filename = None
-        self.nav_list = [["stories", "Story"],["events", "Event"],["time", "TimeLines"], ["locations", "Locations"],["characters", "Characters"]]
+        self.nav_list = [["stories", "Story"],["events", "Event"],["timelines", "TimeLines"], ["locations", "Locations"],["characters", "Characters"]]
         self.menu_active = None
         self.items = []
 
@@ -121,7 +121,7 @@ class WorldOverview(QMainWindow):
        
         # Some window settings
         self.setWindowTitle('OpenWorldBuilder')
-        self.setWindowIcon(QIcon(os.path.join('source','globe-23544_640.ico')))     
+        self.setWindowIcon(QIcon('globe-23544_640.ico'))     
         
         # get items from database if there is selected
         self.get_items()
@@ -136,8 +136,10 @@ class WorldOverview(QMainWindow):
 
         self.items = []
 
-        if self.db != None:
-            # print(selected)
+        print(f"db {self.db}")
+        print(f"menu active {self.menu_active}")
+
+        if self.db != None and self.menu_active != None:
 
             self.items = self.db.read_records(self.menu_active)
 
@@ -185,6 +187,10 @@ class WorldOverview(QMainWindow):
             newbtn.setText("+")
             newbtn.clicked.connect(self.closure_new_item(nav_item[0]))
             box.addWidget(newbtn, 1)
+
+            if self.db == None:
+                listbtn.setDisabled(True)
+                newbtn.setDisabled(True)
 
             frame = QBorderlessFrame()
             frame.setLayout(box)
@@ -287,8 +293,8 @@ class WorldOverview(QMainWindow):
                 dialog = CreateItemDialogEvent()
             elif self.menu_active == "stories":
                 dialog = CreateItemDialogStory()
-            elif self.menu_active == "time":
-                dialog = CreateItemDialogTime()
+            elif self.menu_active == "timelines":
+                dialog = CreateItemDialogTimeline()
             elif self.menu_active == "locations":
                 dialog = CreateItemDialogLocation()
             elif self.menu_active == "characters":

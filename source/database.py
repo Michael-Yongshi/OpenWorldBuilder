@@ -207,7 +207,7 @@ class Database(object):
         self.create_table(
             table="stories",
             variables=[
-                "title TEXT",
+                "name TEXT",
                 "summary TEXT",
                 "body TEXT",
             ]
@@ -225,12 +225,29 @@ class Database(object):
         self.create_table(
             table="events", 
             variables=[
+                "name TEXT NOT NULL",
+                "description TEXT",
                 "intdate INTEGER",
                 "strdate TEXT",
                 "begin INTEGER NOT NULL",
                 "end INTEGER NOT NULL",
+                ]
+            )
+
+        self.create_table(
+            table="timelines", 
+            variables=[
                 "name TEXT NOT NULL",
+                "format TEXT",
                 "description TEXT",
+                ]
+            )
+
+        self.create_table(
+            table="timeline_events", 
+            variables=[
+                "timeline_id INTEGER REFERENCES timelines (id)",
+                "event_id INTEGER REFERENCES events (id)",
                 ]
             )
 
@@ -275,12 +292,12 @@ class Database(object):
         events_query = """
             SELECT
             events.id as event_id,
+            events.name as event_name,
+            events.description as event_description
             events.begin as begin,
             events.intdate as intdate,
             events.strdate as date,
             events.end as end,
-            events.name as event_name,
-            events.description as event_description
             FROM
             events
             """
@@ -294,12 +311,12 @@ class Database(object):
         events_all_query = """
             SELECT
             events.id as event_id,
+            events.name as event_name,
+            events.description as event_description,
             events.begin as begin,
             events.end as end,
             events.intdate as intdate,
             events.strdate as date,
-            events.name as event_name,
-            events.description as event_description,
             characters.id as character_id,
             characters.name as character_name,
             characters.age as character_age,
@@ -357,17 +374,30 @@ def create_test_records(db):
     db.create_records(
         table="events",
         records=[
-            "1, '2002-0-1', 1, 1, 'Born', 'Ollie was born'",
-            "50, '2002-2-20', 1, 1, 'Lost', 'Ollie was lost'",
-            "240, '2002-10- ', 1, 1, 'Swimming with turtles', 'Ollie left home for the beach to swim with turtles'",
-            "245.1, '2002-10-20-12:00', 1, 1, 'Met Max', 'Ollie met max'",
-            "245.2, '2002-10-20-15:00', 1, 1, 'Played at shipwreck', 'Played with turtles'",
-            "245.3, '2002-10-20-15:30', 1, 1, 'Got lost', 'Got lost'",
-            "245.4, '2002-10-20-17:00', 1, 1, 'Tremor', 'Tremor'",
-            "245.4, '2002-10-20-17:00', 1, 1, 'Reunited', 'Reunited'",
+            "'Born', 'Ollie was born', 1, '2002-0-1', 1, 1",
+            "'Lost', 'Ollie was lost', 50, '2002-2-20', 1, 1",
+            "'Swimming with turtles', 'Ollie left home for the beach to swim with turtles', 240, '2002-10- ', 1, 1",
+            "'Met Max', 'Ollie met max', 245.1, '2002-10-20-12:00', 1, 1",
+            "'Played at shipwreck', 'Played with turtles', 245.2, '2002-10-20-15:00', 1, 1",
+            "'Got lost', 'Got lost', 245.3, '2002-10-20-15:30', 1, 1",
+            "'Tremor', 'Tremor', 245.4, '2002-10-20-17:00', 1, 1",
+            "'Reunited', 'Reunited', 245.4, '2002-10-20-17:00', 1, 1",
             ]
     )
     
+    db.create_records(
+        table="timelines",
+        records=[
+            "'Geography', '', 'Geographical Timeline, i.e. for events like the weather or more generic events'",
+            "'Relational', '', 'Relational Timeline, i.e. for events like characters meeting up or have an important conversation'",
+            "'Cultural', '', 'Cultural Timeline, i.e. for events like introduction of a new tradition'",
+            "'Religion', '', 'Religious Timeline, i.e. for events of a religious nature'",
+            "'Political', '', 'Political Timeline, i.e. for events like a new empire is established'",
+            "'Economic', '', 'Economic Timeline, i.e. for events like a stock market crash'",
+            "'Technology', '', 'Technology Timeline, i.e. for events like invention of new tech'",
+        ]
+    )
+
     db.create_records(
         table="characters",
         records=[
@@ -426,4 +456,4 @@ if __name__ == "__main__":
     # db.read_column_names("characters")
     # db.read_column_names("stories")
     # db.read_column_names("locations")
-    # db.read_column_names("time")
+    # db.read_column_names("timeline")
