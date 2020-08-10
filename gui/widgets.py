@@ -33,11 +33,44 @@ from PyQt5.QtGui import (
     QIcon,
     )
 
+class CreateItemDialogStory(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Create a new Story")
+
+        self.name = QLineEdit(self)
+        self.summary = QLineEdit(self)
+        self.body = QLineEdit(self)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+
+        layout = QFormLayout(self)
+        layout.addRow("Name", self.name)
+        layout.addRow("Summary", self.summary)
+        layout.addRow("Body", self.body)
+
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def getInputs(self):
+
+        recordstring = f""
+        
+        recordstring += f"'{self.name.text()}',"
+        recordstring += f"'{self.summary.text()}'," 
+        recordstring += f"'{self.body.text()}'"
+
+        return [recordstring]
+
 class CreateItemDialogEvent(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle("Create a new Event")
+        
         self.name = QLineEdit(self)
         self.description = QLineEdit(self)
         self.intdate = QLineEdit(self)
@@ -52,12 +85,12 @@ class CreateItemDialogEvent(QDialog):
 
         layout = QFormLayout(self)
 
-        layout.addRow("What will the name of this event be?", self.name)
-        layout.addRow("How would you describe this event?", self.description)
-        layout.addRow("What is the date of this event in days?", self.intdate)
-        layout.addRow("What is the date of this event in text?", self.strdate)
-        layout.addRow("Is this a starting event?", self.begin)
-        layout.addRow("Is this a finished event?", self.end)
+        layout.addRow("Name", self.name)
+        layout.addRow("Description", self.description)
+        layout.addRow("Date integer", self.intdate)
+        layout.addRow("Readable date", self.strdate)
+        layout.addRow("Beginning", self.begin)
+        layout.addRow("Ending", self.end)
 
         layout.addWidget(buttonBox)
 
@@ -65,21 +98,114 @@ class CreateItemDialogEvent(QDialog):
         buttonBox.rejected.connect(self.reject)
 
     def getInputs(self):
-        newitem = [f"'{self.name.text()}', '{self.description.text()}', {int(self.intdate.text())}, '{self.strdate.text()}', {int(self.begin.isChecked())}, {int(self.end.isChecked())}"]
-        return newitem
 
-class CreateItemDialogStory(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+        recordstring = f""
+
+        recordstring += f"'{self.name.text()}',"
+        recordstring += f"'{self.description.text()}'," 
+        recordstring += f"{int(self.intdate.text())}," 
+        recordstring += f"'{self.strdate.text()}',"
+        recordstring += f"{int(self.begin.isChecked())},"
+        recordstring += f"{int(self.end.isChecked())}"
+
+        return [recordstring]
 
 class CreateItemDialogTimeline(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.setWindowTitle("Create a new Timeline")
+
+        self.name = QLineEdit(self)
+        self.format = QLineEdit(self)
+        self.description = QLineEdit(self)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+
+        layout = QFormLayout(self)
+        layout.addRow("Name", self.name)
+        layout.addRow("Format", self.format)
+        layout.addRow("Description", self.description)
+
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def getInputs(self):
+
+        recordstring = f""
+        
+        recordstring += f"'{self.name.text()}',"
+        recordstring += f"'{self.format.text()}'," 
+        recordstring += f"'{self.description.text()}'"
+
+        return [recordstring]
+
 class CreateItemDialogLocation(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.setWindowTitle("Create a new Location")
+
+        self.name = QLineEdit(self)
+        self.description = QLineEdit(self)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+
+        layout = QFormLayout(self)
+        layout.addRow("Name", self.name)
+        layout.addRow("Description", self.description)
+
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def getInputs(self):
+
+        recordstring = f""
+        
+        recordstring += f"'{self.name.text()}',"
+        recordstring += f"'{self.description.text()}'"
+
+        return [recordstring]
+
 class CreateItemDialogCharacter(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.setWindowTitle("Create a new Character")
+        
+        self.name = QLineEdit(self)
+        self.age = QLineEdit(self)
+        self.gender = QLineEdit(self)
+        self.nationality = QLineEdit(self)
+        self.race = QLineEdit(self)
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+
+        layout = QFormLayout(self)
+
+        layout.addRow("Name", self.name)
+        layout.addRow("Age", self.age)
+        layout.addRow("Gender", self.gender)
+        layout.addRow("Nationality", self.nationality)
+        layout.addRow("Race", self.race)
+
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def getInputs(self):
+
+        recordstring = f""
+
+        recordstring += f"'{self.name.text()}',"
+        recordstring += f"'{self.age.text()}'," 
+        recordstring += f"'{self.gender.text()}'," 
+        recordstring += f"'{self.nationality.text()}'," 
+        recordstring += f"'{self.race.text()}'" 
+
+        return [recordstring]
