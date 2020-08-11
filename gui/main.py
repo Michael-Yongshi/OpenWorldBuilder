@@ -223,41 +223,44 @@ class WorldOverview(QMainWindow):
 
         pagebox = QFormLayout()
 
-        table = self.table_selected
+        self.table_selected = self.table_selected
         self.pagewidgets = []
 
-        if table != None:
-            print(f"column names {table.readColumnNames()}")
-            print(f"column types {table.readColumnTypes()}")
+        if self.table_selected != None:
+            print(f"column names {self.table_selected.column_names}")
+            print(f"column types {self.table_selected.column_types}")
 
-            if self.record_selected != None:
+            if self.record_selected == None:
+                recordarray = []
+
+            elif self.record_selected != None:
                 print(f"record_selected {self.record_selected}")
                 
-            for c in range(len(table.readColumnNames())):
+            for c in range(len(self.table_selected.column_names)):
                 
                 # create the appropriate widget to display and input values, both added to formlayout and to table.column_widgets
-                if table.readColumnTypes()[c][:4].upper() == "TEXT":
+                if self.table_selected.column_types[c][:4].upper() == "TEXT":
                     widget = QLineEdit()
 
                     if self.record_selected != None:
                         if self.record_selected[c][1] != None:
                             widget.setText(self.record_selected[c][1])
 
-                elif table.readColumnTypes()[c][:4].upper() == "BOOL":
+                elif self.table_selected.column_types[c][:4].upper() == "BOOL":
                     widget = QCheckBox()
 
                     if self.record_selected != None:
                         if self.record_selected[c][1] != None:
                             widget.setChecked(self.record_selected[c][1])
 
-                elif table.readColumnTypes()[c][:7].upper() == "INTEGER":
+                elif self.table_selected.column_types[c][:7].upper() == "INTEGER":
                     widget = QSpinBox()
 
                     if self.record_selected != None:
                         if self.record_selected[c][1] != None:
                             widget.setValue(self.record_selected[c][1])
 
-                elif table.readColumnTypes()[c][:4].upper() == "DATE":
+                elif self.table_selected.column_types[c][:4].upper() == "DATE":
                     widget = QDateTimeEdit()
 
                     if self.record_selected != None:
@@ -268,7 +271,7 @@ class WorldOverview(QMainWindow):
                     widget = QLineEdit()
                     widget.setText("Couldn't set widget")
 
-                pagebox.addRow(table.readColumnNames()[c], widget)
+                pagebox.addRow(self.table_selected.column_names[c], widget)
                 self.pagewidgets.append(widget)
 
             btn = QPushButton()
@@ -384,7 +387,7 @@ class WorldOverview(QMainWindow):
             table_records = self.table_selected.readRecords()
             # print(table_records)
 
-            column_names = self.table_selected.readColumnNames()
+            column_names = self.table_selected.column_names
             # print(f"column names {column_names}")
 
             self.table_records = []
@@ -423,34 +426,16 @@ class WorldOverview(QMainWindow):
         def new_record():
                 
             self.table_selected = selected
-
-            if self.table_selected == "events":
-                dialog = CreateItemDialogEvent()
-            elif self.table_selected == "stories":
-                dialog = CreateItemDialogStory()
-            elif self.table_selected == "timelines":
-                dialog = CreateItemDialogTimeline()
-            elif self.table_selected == "locations":
-                dialog = CreateItemDialogLocation()
-            elif self.table_selected == "characters":
-                dialog = CreateItemDialogCharacter()
-            else:
-                return
-
-            if dialog.exec():
-                datadict = self.db.create_records(table=self.table_selected, records=[dialog.getQuery()])
-                self.record_selected = datadict
-                # print(f"created new record in table {self.table_selected} with id {self.record_selected}")
-
-                self.initUI()
+            self.table_selected.createRecord(values)
+            self.initUI()
 
         return new_record
 
     def closure_update_record(self, record):
 
         def update_record():
-            names = self.table_selected.readColumnNames()
-            types = self.table_selected.readColumnTypes()
+            names = self.table_selected.column_names
+            types = self.table_selected.column_types
             widgets = self.pagewidgets
             recordarray = []
 

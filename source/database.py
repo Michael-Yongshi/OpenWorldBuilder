@@ -140,6 +140,38 @@ class Database(object):
         create_table = f"\nCREATE TABLE IF NOT EXISTS {table}(\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);\n"
         self.execute_query(create_table)
 
+    def create_record(self, table = "test", record = [1,'test']):
+
+        columns = self.read_column_names(table)[1:]
+        # print(f"columns of table {table} are {columns}")
+        column_count = len(columns)
+        # print(f"column count = {column_count}")
+        
+        column_text = ""
+        for i in range(column_count):
+            column_text += f"{columns[i]},"
+        column_text = column_text[:-1]
+        # print(column_text)
+
+        # print(record)  
+        record_text = ""
+        for i in range(column_count):
+            if isinstance(record[i], str):
+                record_text += f"'{record[i]}', "
+            else:
+                record_text += f"{record[i]}, "
+            # print(f"i = {i} with {record_text}")
+        record_text = record_text[:-2]
+        # print(f"record text = {record_text}")
+
+        create_record = f"\nINSERT INTO {table}\n({column_text})\nVALUES\n({record_text})\n;\n"
+        cursor = self.execute_query_cursor(create_record, read = True)
+
+        recordarray = [cursor.lastrowid] + record
+        # print(f"recordarray = {recordarray}")
+
+        return recordarray
+
     def create_records(self, table = "test", records = [[1,'test'], [2, 'test']]):
 
         columns = self.read_column_names(table)[1:]
@@ -175,11 +207,18 @@ class Database(object):
         create_record = f"\nINSERT INTO {table}\n({column_text})\nVALUES\n{records_text}\n;\n"
         cursor = self.execute_query_cursor(create_record, read = True)
 
-        datadict = {
-            "id": cursor.lastrowid
-        }
+        size = len(records)
+        # print(f"len {size}")
+        lastrow = cursor.lastrowid
+        # print(f"lastrow {lastrow}")
 
-        return datadict
+        recordsarray = []
+        for index, record in enumerate(records):
+            rowid = lastrow - (size - index - 1)
+            recordsarray.append([rowid] + record)
+            # print(f"recordsarray = {recordsarray}
+
+        return recordsarray
 
     def read_table_names(self):
 
@@ -334,6 +373,10 @@ class Table(object):
         # create table
         self.createTable()
 
+        # set column names and types including the primary key
+        self.column_types = ["INTEGER"] + self.column_types
+        self.column_names = ["id"] + self.column_names
+
         # initiate records
         self.initial_records = initial_records
         if self.initial_records != []:
@@ -353,8 +396,10 @@ class Table(object):
             values[vindex] = self.transform_boolean(value)
         # print(values)
 
-        row = self.db.create_records(table=self.name, records=[values])
-        return row
+        record = self.db.create_record(table=self.name, record=values)
+        recordobject = Record(self, record)
+
+        return recordobject
 
     def createRecords(self, records):
 
@@ -363,8 +408,8 @@ class Table(object):
                 records[rindex][vindex] = self.transform_boolean(value)
         # print(records)
 
-        row = self.db.create_records(table=self.name, records=records)
-        return row
+        records = self.db.create_records(table=self.name, records=records)
+        return records
 
     def readColumnNames(self):
 
@@ -431,6 +476,28 @@ class Table(object):
             value = 0
         return value
 
+class Record(object):
+    def __init__(self, table, record):
+        super().__init__()
+
+        """
+        class that collects a record / row of a table, including a reference to that table. 
+        It splits conveniently the complete record / row in 3 parts.
+        - the complete 'recordarray' containing all values, including the primary key and foreign keys
+        - the primary key only
+        - the foreign keys only (Not implemented)
+        - the values only
+
+        With Record.get_dict() command you get the record in dictionary format where
+        you can search easily based on column name
+        """
+
+        self.table = table
+        self.recordarray = record
+        self.primarykey = record[0]
+        self.values = record[1:]
+        
+
 if __name__ == "__main__":
 
     newtbl = Table(
@@ -447,7 +514,8 @@ if __name__ == "__main__":
     print(f"read column names: {newtbl.readColumnNames()}")
 
     values = ["Einstein", 100, False]
-    print(f"create single record: {newtbl.createRecord(values)}")
+    record = newtbl.createRecord(values)
+    print(f"create single record - table: {record.table}, primary key: {record.primarykey}, values: {record.values}")
     records = [
         ["Rosenburg", 78, False],
         ["Neil dGrasse Tyson", 57, True],
