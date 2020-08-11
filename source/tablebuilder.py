@@ -10,7 +10,7 @@ def table_builder(filename):
         name = "stories",
         record_name = "story",
         column_names = ["name", "summary", "body"],
-        column_types = ["Text NOT NULL", "Text", "Text"],
+        column_types = ["Text", "Text", "Text"],
     ))
 
     # Events
@@ -18,7 +18,7 @@ def table_builder(filename):
         db = Database(filename="template"),
         name = "events",
         column_names = ["name", "description", "date", "formatdate", "begin", "end"],
-        column_types = ["TEXT NOT NULL", "TEXT", "INTEGER", "TEXT", "BOOL", "BOOL"],
+        column_types = ["TEXT", "TEXT", "INTEGER", "TEXT", "BOOL", "BOOL"],
     ))
 
     # Timelines
@@ -26,7 +26,7 @@ def table_builder(filename):
         db = Database(filename="template"),
         name = "timelines",
         column_names = ["name", "description"],
-        column_types = ["TEXT NOT NULL", "TEXT"],
+        column_types = ["TEXT", "TEXT"],
     ))
     
     # Locations
@@ -34,7 +34,7 @@ def table_builder(filename):
         db = Database(filename="template"),
         name = "locations",
         column_names = ["name", "description"],
-        column_types = ["TEXT NOT NULL", "TEXT"],
+        column_types = ["TEXT", "TEXT"],
     ))
 
     # Characters
@@ -42,7 +42,7 @@ def table_builder(filename):
         db = Database(filename="template"),
         name = "characters",
         column_names = ["name", "age", "gender", "nationality", "race"],
-        column_types = ["TEXT NOT NULL", "Integer", "TEXT", "TEXT", "TEXT"],
+        column_types = ["TEXT", "Integer", "TEXT", "TEXT", "TEXT"],
     ))
 
 
