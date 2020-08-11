@@ -198,7 +198,6 @@ class CreateItemDialogCharacter(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-    def getInsertQuery(self):
 
     def getQuery(self):
 

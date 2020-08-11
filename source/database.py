@@ -219,7 +219,7 @@ class Database(object):
        
         return records
 
-    def update_record(self, table = "test", valuepairs = [["integer", 3], ["text",'test']], where=""):
+    def update_record(self, table = "test", recordarray = [["integer", 3], ["text",'test']], where=""):
 
         # columns = self.read_column_names(table)[1:]
         # # print(f"columns of table {table} are {columns}")
@@ -227,15 +227,15 @@ class Database(object):
         # # print(f"column count = {column_count}")
         # print(columns)
 
-        setvaluepairs = ""
-        for valuepair in valuepairs:
-            if isinstance(valuepair[1], str):
-                setvaluepairs += f"{valuepair[0]} = '{valuepair[1]}',\n"
+        setrecordarray = ""
+        for valuearray in recordarray:
+            if isinstance(valuearray[1], str):
+                setrecordarray += f"{valuearray[0]} = '{valuearray[1]}',\n"
             else:
-                setvaluepairs += f"{valuepair[0]} = {valuepair[1]},\n"
+                setrecordarray += f"{valuearray[0]} = {valuearray[1]},\n"
             
-        setvaluepairs = setvaluepairs[:-2]
-        # print(f"setvaluepairs {setvaluepairs}")
+        setrecordarray = setrecordarray[:-2]
+        # print(f"setrecordarray {setrecordarray}")
 
         inpart = ""
         for s in where[1]:
@@ -249,7 +249,7 @@ class Database(object):
         where = f"{where[0]} IN ({inpart})"
         # print(f"where = {where}")
 
-        update_record = f"\nUPDATE {table} SET\n{setvaluepairs}\nWHERE\n{where}\n;\n"
+        update_record = f"\nUPDATE {table} SET\n{setrecordarray}\nWHERE\n{where}\n;\n"
         cursor = self.execute_query_cursor(update_record, read = True)
 
         # if cursor != None:
@@ -260,57 +260,58 @@ class Database(object):
 
         #     return datadict
 
-    # def get_event_records(self):
+    def get_event_records(self):
 
-    #     # complete list of events
-    #     events_query = """
-    #         SELECT
-    #         events.id as event_id,
-    #         events.name as event_name,
-    #         events.description as event_description
-    #         events.begin as begin,
-    #         events.intdate as intdate,
-    #         events.strdate as date,
-    #         events.end as end,
-    #         FROM
-    #         events
-    #         """
+        #     # complete list of events
+        #     events_query = """
+        #         SELECT
+        #         events.id as event_id,
+        #         events.name as event_name,
+        #         events.description as event_description
+        #         events.begin as begin,
+        #         events.intdate as intdate,
+        #         events.strdate as date,
+        #         events.end as end,
+        #         FROM
+        #         events
+        #         """
 
-    #     events_result = self.execute_query(events_query, read=True)
+        #     events_result = self.execute_query(events_query, read=True)
 
-    #     for record in events_result:
-    #         # print(record)
-    #         pass
+        #     for record in events_result:
+        #         # print(record)
+        #         pass
 
-    #     # info on related characters and locations for the selected event (selected_event)
-    #     events_all_query = """
-    #         SELECT
-    #         events.id as event_id,
-    #         events.name as event_name,
-    #         events.description as event_description,
-    #         events.begin as begin,
-    #         events.end as end,
-    #         events.intdate as intdate,
-    #         events.strdate as date,
-    #         characters.id as character_id,
-    #         characters.name as character_name,
-    #         characters.age as character_age,
-    #         locations.name as location_name,
-    #         locations.description as location_description
-    #         FROM
-    #         events
-    #         LEFT JOIN characters_events ON characters_events.event_id = events.id
-    #         LEFT JOIN characters ON characters_events.character_id = characters.id
-    #         LEFT JOIN locations_events ON locations_events.event_id = events.id
-    #         LEFT JOIN locations ON locations_events.location_id = locations.id
-    #         """
-    #     events_all_result = self.execute_query(events_all_query, read=True)
+        #     # info on related characters and locations for the selected event (selected_event)
+        #     events_all_query = """
+        #         SELECT
+        #         events.id as event_id,
+        #         events.name as event_name,
+        #         events.description as event_description,
+        #         events.begin as begin,
+        #         events.end as end,
+        #         events.intdate as intdate,
+        #         events.strdate as date,
+        #         characters.id as character_id,
+        #         characters.name as character_name,
+        #         characters.age as character_age,
+        #         locations.name as location_name,
+        #         locations.description as location_description
+        #         FROM
+        #         events
+        #         LEFT JOIN characters_events ON characters_events.event_id = events.id
+        #         LEFT JOIN characters ON characters_events.character_id = characters.id
+        #         LEFT JOIN locations_events ON locations_events.event_id = events.id
+        #         LEFT JOIN locations ON locations_events.location_id = locations.id
+        #         """
+        #     events_all_result = self.execute_query(events_all_query, read=True)
 
-    #     for record in events_all_result:
-    #         # print(record)
-    #         pass
+        #     for record in events_all_result:
+        #         # print(record)
+        #         pass
 
-    #     return events_result
+        #     return events_result
+        pass
 
 class Table(object):
     def __init__(self, db, name, column_names, column_types, record_name = "", initial_records = []):
@@ -319,14 +320,16 @@ class Table(object):
         # connect to database
         self.db = db
 
-        # set data
+        # set table and record names
         self.name = name
         if record_name == "":
             self.record_name = self.name[:-1]
         else:
             self.record_name = record_name
-        self.column_names = column_names
+
+        # set column names and types
         self.column_types = column_types
+        self.column_names = column_names
 
         # create table
         self.createTable()
@@ -368,6 +371,12 @@ class Table(object):
         column_names = self.db.read_column_names(table=self.name)
         return column_names
 
+    def readColumnTypes(self):
+        primarykey = ["INTEGER"]
+        column_types = primarykey + self.column_types
+        
+        return column_types
+
     def readRecords(self, columns=-1, select=[]):
 
         if columns != -1:
@@ -398,12 +407,12 @@ class Table(object):
         records = self.db.read_records(table=self.name, columns=column_selection, where=where)
         return records
 
-    def updateRecord(self, valuepairs, select):
+    def updateRecord(self, recordarray, select):
 
-        # print(f"valueparis = {valuepairs}")
-        for valuepair in valuepairs:
-            valuepair[1] = self.transform_boolean(valuepair[1])
-        # print(f"valuepairs = {valuepairs}")
+        # print(f"valueparis = {recordarray}")
+        for valuearray in recordarray:
+            valuearray[1] = self.transform_boolean(valuearray[1])
+        # print(f"recordarray = {recordarray}")
 
         if isinstance(select, int):
             select = ["id", [select]]
@@ -413,7 +422,7 @@ class Table(object):
             select[1][v] = self.transform_boolean(select[1][v])
         # print(f"select {select}")
 
-        self.db.update_record(table=self.name, valuepairs=valuepairs, where=select)
+        self.db.update_record(table=self.name, recordarray=recordarray, where=select)
 
     def transform_boolean(self, value):
         if value == True:
@@ -451,9 +460,9 @@ if __name__ == "__main__":
     selection = ["nobelprizewinner", [True]]
     print(f"read selection: {newtbl.readRecords(select=selection)}")
 
-    valuepairs = [["nobelprizewinner", False]]
+    recordarray = [["nobelprizewinner", False]]
     selection = ["nobelprizewinner", [True]]
-    print(f"update record: {newtbl.updateRecord(valuepairs=valuepairs, select=selection)}")
-    valuepairs = [["name", "Neil deGrasse Tyson"], ["age", 40]]
+    print(f"update record: {newtbl.updateRecord(recordarray=recordarray, select=selection)}")
+    recordarray = [["name", "Neil deGrasse Tyson"], ["age", 40]]
     selection = 4
-    print(f"update typo for id: {newtbl.updateRecord(valuepairs=valuepairs, select=selection)}")
+    print(f"update typo for id: {newtbl.updateRecord(recordarray=recordarray, select=selection)}")
