@@ -408,7 +408,12 @@ class Table(object):
                 records[rindex][vindex] = self.transform_boolean(value)
         # print(records)
 
-        records = self.db.create_records(table=self.name, records=records)
+        created_records = self.db.create_records(table=self.name, records=records)
+        records = []
+        for record in created_records:
+            recordobject = Record(self, record)
+            records += [recordobject]
+
         return records
 
     def readColumnNames(self):
@@ -416,16 +421,10 @@ class Table(object):
         column_names = self.db.read_column_names(table=self.name)
         return column_names
 
-    def readColumnTypes(self):
-        primarykey = ["INTEGER"]
-        column_types = primarykey + self.column_types
-        
-        return column_types
-
     def readRecords(self, columns=-1, select=[]):
 
         if columns != -1:
-            column_selection = ""
+            column_selection = "id, "
             for c in columns:
                 column_selection += f"{self.column_names[c]}, "
             column_selection = column_selection[:-2]
@@ -449,7 +448,13 @@ class Table(object):
             where = ""
         # print(f"where = {where}")
 
-        records = self.db.read_records(table=self.name, columns=column_selection, where=where)
+        read_records = self.db.read_records(table=self.name, columns=column_selection, where=where)
+        records = []
+        print(read_records)
+        for record in read_records:
+            recordobject = Record(self, record)
+            records += [recordobject]
+
         return records
 
     def updateRecord(self, recordarray, select):
@@ -497,6 +502,9 @@ class Record(object):
         self.primarykey = record[0]
         self.values = record[1:]
         
+def print_records(records):
+    for record in records:
+        print(f"-table: {record.table}, primarykey: {record.primarykey}, values: {record.values}")
 
 if __name__ == "__main__":
 
@@ -516,17 +524,27 @@ if __name__ == "__main__":
     values = ["Einstein", 100, False]
     record = newtbl.createRecord(values)
     print(f"create single record - table: {record.table}, primary key: {record.primarykey}, values: {record.values}")
-    records = [
+    values = [
         ["Rosenburg", 78, False],
         ["Neil dGrasse Tyson", 57, True],
     ]
-    print(f"create multiple records: {newtbl.createRecords(records)}")
+    records = newtbl.createRecords(values)
+    print(f"create multiple records")
 
-    print(f"read records: {newtbl.readRecords()}")
-    columns = [0,2]
-    print(f"read with specific columns: {newtbl.readRecords(columns=columns)}")
+
+    records = newtbl.readRecords()
+    print(f"read all records")
+    print_records(records)
+
+    columns = [2]
+    records = newtbl.readRecords(columns=columns)
+    print(f"read with specific columns")
+    print_records(records)
+
     selection = ["nobelprizewinner", [True]]
-    print(f"read selection: {newtbl.readRecords(select=selection)}")
+    records = newtbl.readRecords(select=selection)
+    print(f"read selection")
+    print_records(records)
 
     recordarray = [["nobelprizewinner", False]]
     selection = ["nobelprizewinner", [True]]
