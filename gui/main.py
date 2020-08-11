@@ -403,6 +403,7 @@ class WorldOverview(QMainWindow):
         def nav_selection():
             
             self.table_selected = selected
+            self.record_selected = None
             self.initUI()
 
         return nav_selection
