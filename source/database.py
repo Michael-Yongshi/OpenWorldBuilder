@@ -86,8 +86,6 @@ class Database(object):
 
             self.connection = sqlite3.connect(destination)
             print("Connection to SQLite DB successful")
-            self.create_owb_tables()
-            print("Created OWB tables")
 
         except Error as e:
 
@@ -183,34 +181,6 @@ class Database(object):
 
         return datadict
 
-    def update_record(self, table = "test", values = [3,'test'], row= 1):
-
-        columns = self.read_column_names(table)[1:]
-        # print(f"columns of table {table} are {columns}")
-        column_count = len(columns)
-        # print(f"column count = {column_count}")
-        
-        setvalues = ""
-        for i in range(column_count):
-            if isinstance(values[i], str):
-                setvalues += f"{columns[i]} = '{values[i]}',\n"
-            else:
-                setvalues += f"{columns[i]} = {values[i]},\n"
-            
-        setvalues = setvalues[:-2]
-        # print(f"setvalues {setvalues}")
-
-        update_record = f"\nUPDATE {table} SET\n{setvalues}\nWHERE\n{table}.id = {row}\n;\n"
-        cursor = self.execute_query_cursor(update_record, read = True)
-
-        if cursor != None:
-            datadict = {
-                "id": row
-            }
-            # print(datadict)
-
-            return datadict
-
     def read_table_names(self):
 
         query = f"SELECT name FROM sqlite_master WHERE type='table';"
@@ -239,266 +209,245 @@ class Database(object):
         # print(columns)
         return columns
 
-    def read_records(self, table = "test", selection = "*"):
+    def read_records(self, table = "test", columns="*", where = ""):
 
-        select_records = f"\nSELECT {selection} from {table}"
+        select_records = f"\nSELECT {columns} from {table}"
+        if where != "":
+            select_records += f" WHERE {where}"
+
         records = self.execute_query(select_records, read=True)
        
         return records
 
-    def create_owb_tables(self):
+    def update_record(self, table = "test", valuepairs = [["integer", 3], ["text",'test']], where=""):
 
-        self.create_table(
-            table="stories",
-            variables=[
-                "name TEXT",
-                "summary TEXT",
-                "body TEXT",
-            ]
-        )
+        # columns = self.read_column_names(table)[1:]
+        # # print(f"columns of table {table} are {columns}")
+        # column_count = len(columns)
+        # # print(f"column count = {column_count}")
+        # print(columns)
 
-        self.create_table(
-            table="stories_events",
-            variables=[
-                "story_id INTEGER",
-                "event_id INTEGER",
-            ]
-        )
+        setvaluepairs = ""
+        for valuepair in valuepairs:
+            if isinstance(valuepair[1], str):
+                setvaluepairs += f"{valuepair[0]} = '{valuepair[1]}',\n"
+            else:
+                setvaluepairs += f"{valuepair[0]} = {valuepair[1]},\n"
+            
+        setvaluepairs = setvaluepairs[:-2]
+        # print(f"setvaluepairs {setvaluepairs}")
 
-        # Event table (start and end are default true, if event is only the start or the end of a persistant event, respectively can be set to false)
-        self.create_table(
-            table="events", 
-            variables=[
-                "name TEXT NOT NULL",
-                "description TEXT",
-                "intdate INTEGER",
-                "strdate TEXT",
-                "begin INTEGER NOT NULL",
-                "end INTEGER NOT NULL",
-                ]
-            )
+        inpart = ""
+        for s in where[1]:
 
-        self.create_table(
-            table="timelines", 
-            variables=[
-                "name TEXT NOT NULL",
-                "format TEXT",
-                "description TEXT",
-                ]
-            )
+            if isinstance(s, str):
+                inpart += f"'{s}', "
+            else:
+                inpart += f"{s}, "
 
-        self.create_table(
-            table="timeline_events", 
-            variables=[
-                "timeline_id INTEGER REFERENCES timelines (id)",
-                "event_id INTEGER REFERENCES events (id)",
-                ]
-            )
+        inpart = inpart[:-2]
+        where = f"{where[0]} IN ({inpart})"
+        # print(f"where = {where}")
 
-        self.create_table(
-            table="locations", 
-            variables=[
-                "name TEXT NOT NULL",
-                "description TEXT",
-                ]
-            )
+        update_record = f"\nUPDATE {table} SET\n{setvaluepairs}\nWHERE\n{where}\n;\n"
+        cursor = self.execute_query_cursor(update_record, read = True)
 
-        self.create_table(
-            table="locations_events", 
-            variables=[
-                "location_id INTEGER REFERENCES locations (id)",
-                "event_id INTEGER REFERENCES events (id)",
-                ]
-            )
+        # if cursor != None:
+        #     datadict = {
+        #         "id": row
+        #     }
+        #     # print(datadict)
 
-        self.create_table(
-            table="characters", 
-            variables=[
-                "name TEXT NOT NULL",
-                "age INTEGER",
-                "gender TEXT",
-                "nationality TEXT",
-                "race TEXT",
-                ]
-            )
+        #     return datadict
 
-        self.create_table(
-            table="characters_events", 
-            variables=[
-                "character_id INTEGER REFERENCES characters (id)",
-                "event_id INTEGER REFERENCES events (id)",
-                ]
-            )
+    # def get_event_records(self):
 
-    def get_event_records(self):
+    #     # complete list of events
+    #     events_query = """
+    #         SELECT
+    #         events.id as event_id,
+    #         events.name as event_name,
+    #         events.description as event_description
+    #         events.begin as begin,
+    #         events.intdate as intdate,
+    #         events.strdate as date,
+    #         events.end as end,
+    #         FROM
+    #         events
+    #         """
 
-        # complete list of events
-        events_query = """
-            SELECT
-            events.id as event_id,
-            events.name as event_name,
-            events.description as event_description
-            events.begin as begin,
-            events.intdate as intdate,
-            events.strdate as date,
-            events.end as end,
-            FROM
-            events
-            """
+    #     events_result = self.execute_query(events_query, read=True)
 
-        events_result = self.execute_query(events_query, read=True)
+    #     for record in events_result:
+    #         # print(record)
+    #         pass
 
-        for record in events_result:
-            print(record)
+    #     # info on related characters and locations for the selected event (selected_event)
+    #     events_all_query = """
+    #         SELECT
+    #         events.id as event_id,
+    #         events.name as event_name,
+    #         events.description as event_description,
+    #         events.begin as begin,
+    #         events.end as end,
+    #         events.intdate as intdate,
+    #         events.strdate as date,
+    #         characters.id as character_id,
+    #         characters.name as character_name,
+    #         characters.age as character_age,
+    #         locations.name as location_name,
+    #         locations.description as location_description
+    #         FROM
+    #         events
+    #         LEFT JOIN characters_events ON characters_events.event_id = events.id
+    #         LEFT JOIN characters ON characters_events.character_id = characters.id
+    #         LEFT JOIN locations_events ON locations_events.event_id = events.id
+    #         LEFT JOIN locations ON locations_events.location_id = locations.id
+    #         """
+    #     events_all_result = self.execute_query(events_all_query, read=True)
 
-        # info on related characters and locations for the selected event (selected_event)
-        events_all_query = """
-            SELECT
-            events.id as event_id,
-            events.name as event_name,
-            events.description as event_description,
-            events.begin as begin,
-            events.end as end,
-            events.intdate as intdate,
-            events.strdate as date,
-            characters.id as character_id,
-            characters.name as character_name,
-            characters.age as character_age,
-            locations.name as location_name,
-            locations.description as location_description
-            FROM
-            events
-            LEFT JOIN characters_events ON characters_events.event_id = events.id
-            LEFT JOIN characters ON characters_events.character_id = characters.id
-            LEFT JOIN locations_events ON locations_events.event_id = events.id
-            LEFT JOIN locations ON locations_events.location_id = locations.id
-            """
-        events_all_result = self.execute_query(events_all_query, read=True)
+    #     for record in events_all_result:
+    #         # print(record)
+    #         pass
 
-        for record in events_all_result:
-            print(record)
+    #     return events_result
 
-        return events_result
+class Table(object):
+    def __init__(self, db, name, column_names, column_types, initial_records = []):
+        super().__init__()
 
-def create_test_records(db):
+        # connect to database
+        self.db = db
 
-    db.create_records(
-        table="stories",
-        records=[
-            ['0-1', 'prologue', 'Ollie was born at Mambo beach in Curacao, but lost his family in some way'],
-            ['1-1', 'chapter 1 paragraph one', 'Ollie went swimming with the turtles'],
-            ['2-1', 'chapter 2 paragraph one', 'Ollie met Max and played with him at a shipwreck'],
-            ['3-1', 'chapter 3 paragraph one', 'Ollie lost Max and wandered in unknown territory'],
-            ['4-1', 'chapter 4 paragraph one', 'There was a big tremor in the ocean and Ollie heard Max screaming in the distance'],
-            ['4-2', 'chapter 4 paragraph two', 'Max point of view'],
-            ['5-1', 'chapter 5 paragraph one', 'Ollie and Max are reunited'],
-            ['6-1', 'Epilogue', '3 years later'],
-        ]
-    )
+        # create table
+        self.name = name
+        self.column_names = column_names
+        self.column_types = column_types
+        self.createTable()
 
-    db.create_records(
-        table="stories_events",
-        records=[
-            [1, 1],
-            [1, 2],
-            [2, 3],
-            [3, 4],
-            [3, 5],
-            [4, 6],
-            [5, 7],
-            [6, 7],
-            [7, 8],
-            [8, 4],
-            [8, 6],
-            [8, 7],
-            [8, 8],
-        ]
-    )
+        # initiate records
+        self.initial_records = initial_records
+        if self.initial_records != []:
+            self.createRecords(records=self.initial_records)
 
-    db.create_records(
-        table="events",
-        records=[
-            ['Born', 'Ollie was born', 1, '2002-0-1', 1, 1],
-            ['Lost', 'Ollie was lost', 50, '2002-2-20', 1, 1],
-            ['Swimming with turtles', 'Ollie left home for the beach to swim with turtles', 240, '2002-10- ', 1, 1],
-            ['Met Max', 'Ollie met max', 245.1, '2002-10-20-12:00', 1, 1],
-            ['Played at shipwreck', 'Played with turtles', 245.2, '2002-10-20-15:00', 1, 1],
-            ['Got lost', 'Got lost', 245.3, '2002-10-20-15:30', 1, 1],
-            ['Tremor', 'Tremor', 245.4, '2002-10-20-17:00', 1, 1],
-            ['Reunited', 'Reunited', 245.4, '2002-10-20-17:00', 1, 1],
-            ]
-    )
-    
-    db.create_records(
-        table="timelines",
-        records=[
-            ['Geography', '', 'Geographical Timeline, i.e. for events like the weather or more generic events'],
-            ['Relational', '', 'Relational Timeline, i.e. for events like characters meeting up or have an important conversation'],
-            ['Cultural', '', 'Cultural Timeline, i.e. for events like introduction of a new tradition'],
-            ['Religion', '', 'Religious Timeline, i.e. for events of a religious nature'],
-            ['Political', '', 'Political Timeline, i.e. for events like a new empire is established'],
-            ['Economic', '', 'Economic Timeline, i.e. for events like a stock market crash'],
-            ['Technology', '', 'Technology Timeline, i.e. for events like invention of new tech'],
-        ]
-    )
+    def createTable(self):
 
-    db.create_records(
-        table="characters",
-        records=[
-            ['Ollie', 2, 'male', 'Curacaoian', 'Dog'],
-            ['Max', 67, 'male', 'Curacaoian', 'Turtle'],
-            ]
-    )
+        create_query = []
+        for c in range(len(self.column_names)):
+            create_query.append(f"{self.column_names[c]} {self.column_types[c]}")
 
-    db.create_records(
-        table="characters_events",
-        records=[
-            [1, 1],
-            ]
-    )
+        self.db.create_table(table=self.name, variables=create_query)
 
-    db.create_records(
-        table="locations",
-        records=[
-            ['China', 'Country in the far east'],
-            ['Lost Cabin', 'A lost cabin in the woods'],
-            ['Mambo Beach', 'The best beach of Curacao'],
-            ['Global', 'Tag for an event that happens globally'],
-            ]
-    )
+    def createRecord(self, values):
 
-    db.create_records(
-        table="locations_events",
-        records=[
-            [3, 2], # Ollie is created on the beach
-            [2, 7], # Henk meets casper
-            [1, 8], # Henk goes to china
-            [1, 9], # Xi becomes ruler of China
-            ]
-    )
+        for vindex, value in enumerate(values):
+            values[vindex] = self.transform_boolean(value)
+        # print(values)
 
+        row = self.db.create_records(table=self.name, records=[values])
+        return row
+
+    def createRecords(self, records):
+
+        for rindex, record in enumerate(records):
+            for vindex, value in enumerate(record):
+                records[rindex][vindex] = self.transform_boolean(value)
+        # print(records)
+
+        row = self.db.create_records(table=self.name, records=records)
+        return row
+
+    def readColumnNames(self):
+
+        column_names = self.db.read_column_names(table=self.name)
+        return column_names
+
+    def readRecords(self, columns=-1, select=[]):
+
+        if columns != -1:
+            column_selection = ""
+            for c in columns:
+                column_selection += f"{self.column_names[c]}, "
+            column_selection = column_selection[:-2]
+        else:
+            column_selection = "*"
+        # print(f"columns = {column_selection}")
+
+        # print(f"select {select}")
+        if select != []:
+            inpart = ""
+            for s in select[1]:
+                s = self.transform_boolean(s)
+
+                if isinstance(s, str):
+                    inpart += f"'{s}', "
+                else:
+                    inpart += f"{s}, "
+            inpart = inpart[:-2]
+            where = f"{select[0]} IN ({inpart})"
+        else:
+            where = ""
+        # print(f"where = {where}")
+
+        records = self.db.read_records(table=self.name, columns=column_selection, where=where)
+        return records
+
+    def updateRecord(self, valuepairs, select):
+
+        # print(f"valueparis = {valuepairs}")
+        for valuepair in valuepairs:
+            valuepair[1] = self.transform_boolean(valuepair[1])
+        # print(f"valuepairs = {valuepairs}")
+
+        if isinstance(select, int):
+            select = ["id", [select]]
+        
+        # print(f"select {select}")
+        for v in range(len(select[1])):
+            select[1][v] = self.transform_boolean(select[1][v])
+        # print(f"select {select}")
+
+        self.db.update_record(table=self.name, valuepairs=valuepairs, where=select)
+
+    def transform_boolean(self, value):
+        if value == True:
+            value = 1
+        elif value == False:
+            value = 0
+        return value
 
 if __name__ == "__main__":
 
-    # print("")
-    # db = Database(filename="test")
-    # print("")
+    newtbl = Table(
+        db = Database(path="", filename="science"),
+        name = "scientists",
+        column_names = ["name", "age", "nobelprizewinner"],
+        column_types = ["Text", "Integer", "Bool"],
+        initial_records = [
+            ["Hawking", 68, True]
+        ]
+    )
+    
+    # test functions of table
+    print(f"read column names: {newtbl.readColumnNames()}")
 
-    # db.create_table()
-    # db.create_records()
-    # db.read_records()
+    values = ["Einstein", 100, False]
+    print(f"create single record: {newtbl.createRecord(values)}")
+    records = [
+        ["Rosenburg", 78, False],
+        ["Neil dGrasse Tyson", 57, True],
+    ]
+    print(f"create multiple records: {newtbl.createRecords(records)}")
 
-    print("")
-    db = Database()
-    print("")
+    print(f"read records: {newtbl.readRecords()}")
+    columns = [0,2]
+    print(f"read with specific columns: {newtbl.readRecords(columns=columns)}")
+    selection = ["nobelprizewinner", [True]]
+    print(f"read selection: {newtbl.readRecords(select=selection)}")
 
-    db.create_owb_tables()
-    create_test_records(db)
-    # db.read_records(table="events")
-    # db.get_event_records()
-    db.read_column_names("events")
-    # db.read_column_names("characters")
-    # db.read_column_names("stories")
-    # db.read_column_names("locations")
-    # db.read_column_names("timeline")
-    db.update_record("events", values=['NeverBorn', 'Ollie was never born', 1, '2002-0-1', 1, 1], row = 1)
+    valuepairs = [["nobelprizewinner", False]]
+    selection = ["nobelprizewinner", [True]]
+    print(f"update record: {newtbl.updateRecord(valuepairs=valuepairs, select=selection)}")
+    valuepairs = [["name", "Neil deGrasse Tyson"], ["age", 40]]
+    selection = 4
+    print(f"update typo for id: {newtbl.updateRecord(valuepairs=valuepairs, select=selection)}")
