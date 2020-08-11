@@ -313,16 +313,22 @@ class Database(object):
     #     return events_result
 
 class Table(object):
-    def __init__(self, db, name, column_names, column_types, initial_records = []):
+    def __init__(self, db, name, column_names, column_types, record_name = "", initial_records = []):
         super().__init__()
 
         # connect to database
         self.db = db
 
-        # create table
+        # set data
         self.name = name
+        if record_name == "":
+            self.record_name = self.name[:-1]
+        else:
+            self.record_name = record_name
         self.column_names = column_names
         self.column_types = column_types
+
+        # create table
         self.createTable()
 
         # initiate records
