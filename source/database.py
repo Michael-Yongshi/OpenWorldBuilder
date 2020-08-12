@@ -94,33 +94,16 @@ class Database(object):
     def delete_database(self):
         pass
 
-    def execute_query_cursor(self, query, read=False):
+    def execute_query(self, query):
         cursor = self.connection.cursor()
 
         try:
-            print(query)
+            print(f"--------------------\n{query}\n")
             cursor.execute(query)
             self.connection.commit()
-            print("Query executed successfully")
+            print("Success!\n--------------------")
 
-            if read == True:
-                return cursor
-
-        except Error as e:
-            print(f"The error '{e}' occurred")
-
-    def execute_query(self, query, read=False):
-        cursor = self.connection.cursor()
-
-        try:
-            print(query)
-            cursor.execute(query)
-            self.connection.commit()
-            print("Query executed successfully")
-
-            if read == True:
-                data = cursor.fetchall()
-                return data
+            return cursor
 
         except Error as e:
             print(f"The error '{e}' occurred")
@@ -137,40 +120,8 @@ class Database(object):
             valuetext += f"{variable},\n"
         valuetext = valuetext[:-2]
 
-        create_table = f"\nCREATE TABLE IF NOT EXISTS {table}(\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);\n"
+        create_table = f"CREATE TABLE IF NOT EXISTS {table}(\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);"
         self.execute_query(create_table)
-
-    def create_record(self, table = "test", record = [1,'test']):
-
-        columns = self.read_column_names(table)[1:]
-        # print(f"columns of table {table} are {columns}")
-        column_count = len(columns)
-        # print(f"column count = {column_count}")
-        
-        column_text = ""
-        for i in range(column_count):
-            column_text += f"{columns[i]},"
-        column_text = column_text[:-1]
-        # print(column_text)
-
-        # print(record)  
-        record_text = ""
-        for i in range(column_count):
-            if isinstance(record[i], str):
-                record_text += f"'{record[i]}', "
-            else:
-                record_text += f"{record[i]}, "
-            # print(f"i = {i} with {record_text}")
-        record_text = record_text[:-2]
-        # print(f"record text = {record_text}")
-
-        create_record = f"\nINSERT INTO {table}\n({column_text})\nVALUES\n({record_text})\n;\n"
-        cursor = self.execute_query_cursor(create_record, read = True)
-
-        recordarray = [cursor.lastrowid] + record
-        # print(f"recordarray = {recordarray}")
-
-        return recordarray
 
     def create_records(self, table = "test", records = [[1,'test'], [2, 'test']]):
 
@@ -204,28 +155,15 @@ class Database(object):
         records_text = records_text[:-1]
         # print(records_text)
 
-        create_record = f"\nINSERT INTO {table}\n({column_text})\nVALUES\n{records_text}\n;\n"
-        cursor = self.execute_query_cursor(create_record, read = True)
-
-        size = len(records)
-        # print(f"len {size}")
-        lastrow = cursor.lastrowid
-        # print(f"lastrow {lastrow}")
-
-        recordsarray = []
-        for index, record in enumerate(records):
-            rowid = lastrow - (size - index - 1)
-            recordsarray.append([rowid] + record)
-            # print(f"recordsarray = {recordsarray}
-
-        return recordsarray
+        create_record = f"INSERT INTO {table}\n({column_text})\nVALUES\n{records_text}\n;"
+        self.execute_query(create_record)
 
     def read_table_names(self):
 
         query = f"SELECT name FROM sqlite_master WHERE type='table';"
         
-        tables = self.execute_query(query=query, read=True)
-
+        cursor = self.execute_query(query=query)
+        tables = cursor.fetchall()
         # print(tables)
         # for table in tables:
             # print(table)
@@ -236,7 +174,7 @@ class Database(object):
 
         query = f"SELECT * FROM {table};"
         
-        cursor = self.execute_query_cursor(query=query, read=True)
+        cursor = self.execute_query(query=query)
         description = cursor.description
 
         # print(description)
@@ -250,21 +188,16 @@ class Database(object):
 
     def read_records(self, table = "test", columns="*", where = ""):
 
-        select_records = f"\nSELECT {columns} from {table}"
+        select_records = f"SELECT {columns} from {table}"
         if where != "":
             select_records += f" WHERE {where}"
 
-        records = self.execute_query(select_records, read=True)
-       
+        cursor = self.execute_query(select_records)    
+        records = self.get_records_array(cursor.fetchall())
+
         return records
 
     def update_record(self, table = "test", recordarray = [["integer", 3], ["text",'test']], where=""):
-
-        # columns = self.read_column_names(table)[1:]
-        # # print(f"columns of table {table} are {columns}")
-        # column_count = len(columns)
-        # # print(f"column count = {column_count}")
-        # print(columns)
 
         setrecordarray = ""
         for valuearray in recordarray:
@@ -288,69 +221,29 @@ class Database(object):
         where = f"{where[0]} IN ({inpart})"
         # print(f"where = {where}")
 
-        update_record = f"\nUPDATE {table} SET\n{setrecordarray}\nWHERE\n{where}\n;\n"
-        cursor = self.execute_query_cursor(update_record, read = True)
+        update_query = f"UPDATE {table} SET\n{setrecordarray}\nWHERE\n{where}\n;"
+        self.execute_query(update_query)
 
-        # if cursor != None:
-        #     datadict = {
-        #         "id": row
-        #     }
-        #     # print(datadict)
+    def get_records_array(self, sqlrecords):
 
-        #     return datadict
+        records = []
 
-    def get_event_records(self):
+        for sqlrecord in sqlrecords:
+            recordarray = []
 
-        #     # complete list of events
-        #     events_query = """
-        #         SELECT
-        #         events.id as event_id,
-        #         events.name as event_name,
-        #         events.description as event_description
-        #         events.begin as begin,
-        #         events.intdate as intdate,
-        #         events.strdate as date,
-        #         events.end as end,
-        #         FROM
-        #         events
-        #         """
+            for value in sqlrecord:
+                recordarray += [value]
 
-        #     events_result = self.execute_query(events_query, read=True)
+            records += [recordarray]
 
-        #     for record in events_result:
-        #         # print(record)
-        #         pass
+        return records
 
-        #     # info on related characters and locations for the selected event (selected_event)
-        #     events_all_query = """
-        #         SELECT
-        #         events.id as event_id,
-        #         events.name as event_name,
-        #         events.description as event_description,
-        #         events.begin as begin,
-        #         events.end as end,
-        #         events.intdate as intdate,
-        #         events.strdate as date,
-        #         characters.id as character_id,
-        #         characters.name as character_name,
-        #         characters.age as character_age,
-        #         locations.name as location_name,
-        #         locations.description as location_description
-        #         FROM
-        #         events
-        #         LEFT JOIN characters_events ON characters_events.event_id = events.id
-        #         LEFT JOIN characters ON characters_events.character_id = characters.id
-        #         LEFT JOIN locations_events ON locations_events.event_id = events.id
-        #         LEFT JOIN locations ON locations_events.location_id = locations.id
-        #         """
-        #     events_all_result = self.execute_query(events_all_query, read=True)
+    def get_max_row(self, table):
 
-        #     for record in events_all_result:
-        #         # print(record)
-        #         pass
+        cursor = self.execute_query(f"SELECT COUNT(id) FROM {table}")
+        lastrow = cursor.fetchall()[0][0]
 
-        #     return events_result
-        pass
+        return lastrow
 
 class Table(object):
     def __init__(self, db, name, column_names, column_types, record_name = "", initial_records = []):
@@ -392,34 +285,50 @@ class Table(object):
 
     def createRecord(self, values):
 
-        for vindex, value in enumerate(values):
-            values[vindex] = self.transform_boolean(value)
+        for index, value in enumerate(values):
+            values[index] = self.transform_boolean(value)
         # print(values)
 
-        record = self.db.create_record(table=self.name, record=values)
-        recordobject = Record(self, record)
+        self.db.create_records(table=self.name, records=[values])
+
+        newrows_last = self.db.get_max_row(self.name)
+
+        sqlrecords = self.db.read_records(table=self.name, where=f"id = {newrows_last}")
+        recordobject = Record(self, sqlrecords[0])
 
         return recordobject
 
     def createRecords(self, records):
 
-        for rindex, record in enumerate(records):
-            for vindex, value in enumerate(record):
-                records[rindex][vindex] = self.transform_boolean(value)
-        # print(records)
+        if len(records) == 1:
+            records = [self.createRecord(records[0])]
+            return records
 
-        created_records = self.db.create_records(table=self.name, records=records)
-        records = []
-        for record in created_records:
-            recordobject = Record(self, record)
-            records += [recordobject]
+        else:
+            newrows_first = self.db.get_max_row(self.name) + 1
 
-        return records
+            for rindex, record in enumerate(records):
+                for vindex, value in enumerate(record):
+                    records[rindex][vindex] = self.transform_boolean(value)
+            # print(records)
 
-    def readColumnNames(self):
+            self.db.create_records(table=self.name, records=records)
 
-        column_names = self.db.read_column_names(table=self.name)
-        return column_names
+            newrows_last = self.db.get_max_row(self.name)
+            whererange = range(newrows_first, newrows_last + 1)
+            # print(f"create range = {whererange}")
+
+            wherestring = ""
+            for row in whererange:
+                wherestring += f"{row}, "
+            wherestring = wherestring[:-2]
+            records = self.db.read_records(table=self.name, where=f"id IN ({wherestring})")
+
+            recordobjects = []
+            for record in records:
+                recordobjects += [Record(self, record)]
+
+            return recordobjects
 
     def readRecords(self, columns=-1, select=[]):
 
@@ -450,14 +359,20 @@ class Table(object):
 
         read_records = self.db.read_records(table=self.name, columns=column_selection, where=where)
         records = []
-        print(read_records)
+        # print(read_records)
         for record in read_records:
-            recordobject = Record(self, record)
+            valuearray = []
+            for value in record:
+                valuearray += [value]
+            recordobject = Record(self, valuearray)
             records += [recordobject]
 
         return records
 
     def updateRecord(self, recordarray, select):
+
+        table_before = self.readRecords()
+        # print(f"table before = {table_before}")
 
         # print(f"valueparis = {recordarray}")
         for valuearray in recordarray:
@@ -473,6 +388,20 @@ class Table(object):
         # print(f"select {select}")
 
         self.db.update_record(table=self.name, recordarray=recordarray, where=select)
+                    
+        table_after = self.readRecords()
+        # print(f"table after = {table_after}")
+
+        record_objects = []
+        for index, record in enumerate(table_after):
+            if table_before[index].primarykey != table_after[index].primarykey:
+                print(f"Update messed up the table!!!")
+                return
+            if table_before[index].values != table_after[index].values:
+                record_objects += [table_after[index]]
+        # print(f"updated rows {record_objects}")
+
+        return record_objects
 
     def transform_boolean(self, value):
         if value == True:
@@ -518,19 +447,21 @@ if __name__ == "__main__":
         ]
     )
     
-    # test functions of table
-    print(f"read column names: {newtbl.readColumnNames()}")
+    #test functions of table
+    print(f"read column names: {newtbl.column_names}")
 
     values = ["Einstein", 100, False]
     record = newtbl.createRecord(values)
-    print(f"create single record - table: {record.table}, primary key: {record.primarykey}, values: {record.values}")
+    print(f"create single record")
+    print_records([record])
+
     values = [
         ["Rosenburg", 78, False],
         ["Neil dGrasse Tyson", 57, True],
     ]
     records = newtbl.createRecords(values)
     print(f"create multiple records")
-
+    print_records(records)
 
     records = newtbl.readRecords()
     print(f"read all records")
@@ -548,7 +479,12 @@ if __name__ == "__main__":
 
     recordarray = [["nobelprizewinner", False]]
     selection = ["nobelprizewinner", [True]]
-    print(f"update record: {newtbl.updateRecord(recordarray=recordarray, select=selection)}")
+    records = newtbl.updateRecord(recordarray=recordarray, select=selection)
+    print(f"update true to false")
+    print_records(records)
+
     recordarray = [["name", "Neil deGrasse Tyson"], ["age", 40]]
     selection = 4
-    print(f"update typo for id: {newtbl.updateRecord(recordarray=recordarray, select=selection)}")
+    records = newtbl.updateRecord(recordarray=recordarray, select=selection)
+    print(f"update record 'id = 4'")
+    print_records(records)
