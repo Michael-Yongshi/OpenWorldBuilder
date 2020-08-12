@@ -4,6 +4,8 @@ import os
 from PyQt5.QtCore import (
     Qt,
     pyqtSignal,
+    QDate,
+    QDateTime,
     )
 
 from PyQt5.QtWidgets import (
@@ -50,6 +52,7 @@ from source.tablebuilder import table_builder
 from source.database import (
     Database,
     Table,
+    Record,
     show_files,
     saveas_file,
     check_existance,
@@ -223,7 +226,6 @@ class WorldOverview(QMainWindow):
 
         pagebox = QFormLayout()
 
-        self.table_selected = self.table_selected
         self.pagewidgets = []
 
         if self.table_selected != None:
@@ -231,53 +233,49 @@ class WorldOverview(QMainWindow):
             print(f"column types {self.table_selected.column_types}")
 
             if self.record_selected == None:
-                recordarray = []
+                # show description of table and other explenations
+                pass
+            
+            else:
+               
+                # columnrange = range(0, self.table_selected.readColumnCount())
+                # print(f"range {columnrange}")
+                print(f"recordarray = {self.record_selected.recordarray}")
 
-            elif self.record_selected != None:
-                print(f"record_selected {self.record_selected}")
-                
-            for c in range(len(self.table_selected.column_names)):
-                
-                # create the appropriate widget to display and input values, both added to formlayout and to table.column_widgets
-                if self.table_selected.column_types[c][:4].upper() == "TEXT":
-                    widget = QLineEdit()
+                for c in range(0, self.table_selected.readColumnCount()):
+                    # print(f"c {c}")
+                    # print(f"column type = {self.table_selected.column_types[c]}")
 
-                    if self.record_selected != None:
-                        if self.record_selected[c][1] != None:
-                            widget.setText(self.record_selected[c][1])
+                    # create the appropriate widget to display and input values, both added to formlayout and to table.column_widgets
+                    if self.table_selected.column_types[c][:4].upper() == "TEXT":
+                        widget = QLineEdit()
+                        widget.setText(self.record_selected.recordarray[c])
 
-                elif self.table_selected.column_types[c][:4].upper() == "BOOL":
-                    widget = QCheckBox()
+                    elif self.table_selected.column_types[c][:4].upper() == "BOOL":
+                        widget = QCheckBox()
+                        widget.setChecked(self.record_selected.recordarray[c])                            
 
-                    if self.record_selected != None:
-                        if self.record_selected[c][1] != None:
-                            widget.setChecked(self.record_selected[c][1])
+                    elif self.table_selected.column_types[c][:7].upper() == "INTEGER":
+                        widget = QSpinBox()
+                        widget.setValue(self.record_selected.recordarray[c])
 
-                elif self.table_selected.column_types[c][:7].upper() == "INTEGER":
-                    widget = QSpinBox()
+                    elif self.table_selected.column_types[c][:4].upper() == "DATE":
+                        widget = QDateTimeEdit()
+                        date = QDate()
+                        date.fromString(self.record_selected.recordarray[c], 'yyyy-MM-dd')
+                        widget.setDate(date)
 
-                    if self.record_selected != None:
-                        if self.record_selected[c][1] != None:
-                            widget.setValue(self.record_selected[c][1])
+                    else:
+                        widget = QLineEdit()
+                        widget.setText("Couldn't set widget")
 
-                elif self.table_selected.column_types[c][:4].upper() == "DATE":
-                    widget = QDateTimeEdit()
+                    pagebox.addRow(self.table_selected.column_names[c], widget)
+                    self.pagewidgets.append(widget)
 
-                    if self.record_selected != None:
-                        if self.record_selected[c][1] != None:
-                            widget.setValue(self.record_selected[c][1])
-
-                else:
-                    widget = QLineEdit()
-                    widget.setText("Couldn't set widget")
-
-                pagebox.addRow(self.table_selected.column_names[c], widget)
-                self.pagewidgets.append(widget)
-
-            btn = QPushButton()
-            btn.setText("Edit")
-            btn.clicked.connect(self.closure_update_record(self.record_selected))
-            pagebox.addWidget(btn)
+                btn = QPushButton()
+                btn.setText("Edit")
+                btn.clicked.connect(self.closure_update_record(self.record_selected))
+                pagebox.addWidget(btn)
 
         pageboxframe = QRaisedFrame()
         pageboxframe.setLayout(pagebox)
@@ -426,7 +424,11 @@ class WorldOverview(QMainWindow):
         def new_record():
                 
             self.table_selected = selected
-            self.table_selected.createRecord(values)
+
+            newarray = self.table_selected.defaults
+            print(f"newarray {newarray}")
+
+            self.record_selected = Record(self.table_selected, newarray)
             self.initUI()
 
         return new_record

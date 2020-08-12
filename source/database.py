@@ -1,10 +1,13 @@
 import os
+import datetime
+
 from pathlib import Path
 
 from shutil import copyfile
 
 import sqlite3
 from sqlite3 import Error
+
 # https://stackoverflow.com/questions/2047814/is-it-possible-to-store-python-class-objects-in-sqlite
 
 def get_localpath():
@@ -246,7 +249,7 @@ class Database(object):
         return lastrow
 
 class Table(object):
-    def __init__(self, db, name, column_names, column_types, record_name = "", initial_records = []):
+    def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = []):
         super().__init__()
 
         # connect to database
@@ -270,10 +273,77 @@ class Table(object):
         self.column_types = ["INTEGER"] + self.column_types
         self.column_names = ["id"] + self.column_names
 
+        if defaults != []:
+            self.defaults = [-1] + defaults
+        else:
+            self.defaults = []
+            for c in range(0, self.readColumnCount()):
+                if self.column_types[c][:4].upper() == "TEXT":
+                    default = [""]
+                elif self.column_types[c][:4].upper() == "BOOL":
+                    default = [False]
+                elif self.column_types[c][:4].upper() == "DATE":
+                    default = [datetime.date.today]
+                else:
+                    default = [0]
+                self.defaults += default
+            # print(f"defaults set are {self.defaults}")
+
         # initiate records
         self.initial_records = initial_records
         if self.initial_records != []:
             self.createRecords(records=self.initial_records)
+
+    def readColumnCount(self, includepk=True):
+        """including private key column"""
+
+        if includepk == True:
+            return len(self.column_names)
+        else:
+            return len(self.column_names) - 1
+
+    def readMaxRow(self):
+        
+        return self.db.get_max_row(table=self.name)
+
+    def readRecords(self, columns=-1, select=[]):
+
+        if columns != -1:
+            column_selection = "id, "
+            for c in columns:
+                column_selection += f"{self.column_names[c]}, "
+            column_selection = column_selection[:-2]
+        else:
+            column_selection = "*"
+        # print(f"columns = {column_selection}")
+
+        # print(f"select {select}")
+        if select != []:
+            inpart = ""
+            for s in select[1]:
+                s = self.transform_boolean(s)
+
+                if isinstance(s, str):
+                    inpart += f"'{s}', "
+                else:
+                    inpart += f"{s}, "
+            inpart = inpart[:-2]
+            where = f"{select[0]} IN ({inpart})"
+        else:
+            where = ""
+        # print(f"where = {where}")
+
+        read_records = self.db.read_records(table=self.name, columns=column_selection, where=where)
+        records = []
+        # print(read_records)
+        for record in read_records:
+            valuearray = []
+            for value in record:
+                valuearray += [value]
+            recordobject = Record(self, valuearray)
+            records += [recordobject]
+
+        return records
 
     def createTable(self):
 
@@ -329,45 +399,6 @@ class Table(object):
                 recordobjects += [Record(self, record)]
 
             return recordobjects
-
-    def readRecords(self, columns=-1, select=[]):
-
-        if columns != -1:
-            column_selection = "id, "
-            for c in columns:
-                column_selection += f"{self.column_names[c]}, "
-            column_selection = column_selection[:-2]
-        else:
-            column_selection = "*"
-        # print(f"columns = {column_selection}")
-
-        # print(f"select {select}")
-        if select != []:
-            inpart = ""
-            for s in select[1]:
-                s = self.transform_boolean(s)
-
-                if isinstance(s, str):
-                    inpart += f"'{s}', "
-                else:
-                    inpart += f"{s}, "
-            inpart = inpart[:-2]
-            where = f"{select[0]} IN ({inpart})"
-        else:
-            where = ""
-        # print(f"where = {where}")
-
-        read_records = self.db.read_records(table=self.name, columns=column_selection, where=where)
-        records = []
-        # print(read_records)
-        for record in read_records:
-            valuearray = []
-            for value in record:
-                valuearray += [value]
-            recordobject = Record(self, valuearray)
-            records += [recordobject]
-
-        return records
 
     def updateRecord(self, recordarray, select):
 

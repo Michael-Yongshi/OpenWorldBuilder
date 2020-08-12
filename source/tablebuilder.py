@@ -1,3 +1,5 @@
+import datetime
+
 from source.database import Database, Table
 
 def table_builder(filename):
@@ -18,7 +20,8 @@ def table_builder(filename):
         db = Database(filename="template"),
         name = "events",
         column_names = ["name", "description", "date", "formatdate", "begin", "end"],
-        column_types = ["TEXT", "TEXT", "INTEGER", "TEXT", "BOOL", "BOOL"],
+        column_types = ["TEXT", "TEXT", "DATE", "TEXT", "BOOL", "BOOL"],
+        defaults = ["", "", datetime.date(2020, 1, 1), "", True, True],
     ))
 
     # Timelines
