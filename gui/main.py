@@ -1,5 +1,6 @@
 import sys
 import os
+from datetime import datetime
 
 from PyQt5.QtCore import (
     Qt,
@@ -262,6 +263,8 @@ class WorldOverview(QMainWindow):
                     elif self.table_selected.column_types[c][:4].upper() == "DATE":
                         widget = QDateTimeEdit()
                         date = QDate()
+                        sqldate = self.record_selected.recordarray[c]
+                        datestring = datetime.date()
                         date.fromString(self.record_selected.recordarray[c], 'yyyy-MM-dd')
                         widget.setDate(date)
 
@@ -273,9 +276,14 @@ class WorldOverview(QMainWindow):
                     self.pagewidgets.append(widget)
 
                 btn = QPushButton()
-                btn.setText("Edit")
-                btn.clicked.connect(self.closure_update_record(self.record_selected))
                 pagebox.addWidget(btn)
+                if self.record_selected.primarykey == -1:
+                    btn.setText("Create")
+                    btn.clicked.connect(self.create_new)
+                else:
+                    btn.setText("Edit")
+                    btn.clicked.connect(self.closure_update_record(self.record_selected))
+
 
         pageboxframe = QRaisedFrame()
         pageboxframe.setLayout(pagebox)
@@ -433,29 +441,41 @@ class WorldOverview(QMainWindow):
 
         return new_record
 
+    def create_new(self):
+
+        recordarray = self.getwidgetvalues()
+
+        record = self.table_selected.createRecord(recordarray=recordarray)
+        self.set_record_selection(record)
+        self.initUI()
+
     def closure_update_record(self, record):
 
         def update_record():
-            names = self.table_selected.column_names
-            types = self.table_selected.column_types
-            widgets = self.pagewidgets
-            recordarray = []
-
-            for i in range(len(types)):
-                if types[i][:4].upper() == "TEXT":
-                    recordarray.append([names[i],widgets[i].text()])
-                elif types[i][:7].upper() == "INTEGER":
-                    recordarray.append([names[i],widgets[i].value()])
-                elif types[i][:4].upper() == "DATE":
-                    recordarray.append([names[i],widgets[i].value()])
-                elif types[i][:4].upper() == "BOOL":
-                    recordarray.append([names[i],widgets[i].isChecked()])
             
-            self.table_selected.updateRecord(recordarray=recordarray, select=self.record_selected[0][1])
-            self.set_record_selection(recordarray)
+            recordarray = self.getwidgetvalues()
+            
+            record = self.table_selected.updateRecord(recordarray=recordarray, select=self.record_selected.primarykey)
+            self.set_record_selection(record)
             self.initUI()
 
         return update_record
+
+    def getwidgetvalues(self):
+        names = self.table_selected.column_names
+        types = self.table_selected.column_types
+        widgets = self.pagewidgets
+
+        recordarray = []
+        for i in range(len(types)):
+            if types[i][:4].upper() == "TEXT":
+                recordarray.append([names[i],widgets[i].text()])
+            elif types[i][:7].upper() == "INTEGER":
+                recordarray.append([names[i],widgets[i].value()])
+            elif types[i][:4].upper() == "DATE":
+                recordarray.append([names[i],widgets[i].value()])
+            elif types[i][:4].upper() == "BOOL":
+                recordarray.append([names[i],widgets[i].isChecked()])
 
 def run():
     global app
