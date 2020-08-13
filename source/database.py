@@ -257,9 +257,6 @@ class Table(object):
     def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = [], column_placement = []):
         super().__init__()
 
-        # connect to database
-        self.db = db
-
         # set table and record names
         self.name = name
         if record_name == "":
@@ -267,24 +264,48 @@ class Table(object):
         else:
             self.record_name = record_name
 
-        # set column names and types
-        self.column_types = column_types
-        self.column_names = column_names
-
-        # create table
-        self.createTable()
-
         # set column names and types including the primary key
-        self.column_types = ["INTEGER"] + self.column_types
-        self.column_names = ["id"] + self.column_names
+        self.column_names = ["id"] + column_names
+        self.column_types = ["INTEGER"] + column_types
 
         self.set_defaults(defaults)
         self.set_column_placement(column_placement)
 
-        # initiate records
+        # set connection to database
+        self.db = db
+
+        # create tables in database
+        self.createTable()
+
         self.initial_records = initial_records
+        # initiate records
         if self.initial_records != []:
             self.createRecords(records=self.initial_records)
+
+    def move_to_database(self, db):
+
+        # copy table records
+        tablerecords = self.readRecords()
+
+        # connect to new database
+        self.db = db
+
+        # create tables in new database
+        self.createTable()
+
+        # copy records in new database
+        tablevalues = []
+        for record in tablerecords:
+            values = []
+
+            for value in record.values:
+                values += [value]
+
+            print(f"values {values}")
+            tablevalues += [values]
+
+        print(f"tablevalues {tablevalues}")
+        self.createRecords(tablevalues)
 
     def set_defaults(self, defaults):
         if defaults != []:
@@ -378,8 +399,8 @@ class Table(object):
     def createTable(self):
 
         create_query = []
-        for c in range(len(self.column_names)):
-            create_query.append(f"{self.column_names[c]} {self.column_types[c]}")
+        for index, value in enumerate(self.column_names[1:]):
+            create_query.append(f"{value} {self.column_types[index]}")
 
         self.db.create_table(table=self.name, variables=create_query)
 

@@ -24,16 +24,16 @@ def table_builder(filename):
 
     # Events
     tables.append(Table(
-        db = Database(filename="template"),
+        db = Database(filename=filename),
         name = "events",
-        column_names = ["name", "description", "date", "formatdate", "begin", "end"],
-        column_types = ["VARCHAR(255)", "TEXT", "INTEGER", "VARCHAR(255)", "BOOL", "BOOL"],
-        defaults = ["", "", 0, "", True, True],
+        column_names = ["name", "date", "formatdate", "begin", "end", "description"],
+        column_types = ["VARCHAR(255)", "INTEGER", "VARCHAR(255)", "BOOL", "BOOL", "TEXT"],
+        defaults = ["", 0, "", True, True, ""],
     ))
 
     # Timelines
     tables.append(Table(
-        db = Database(filename="template"),
+        db = Database(filename=filename),
         name = "timelines",
         column_names = ["name", "description"],
         column_types = ["VARCHAR(255)", "TEXT"],
@@ -41,7 +41,7 @@ def table_builder(filename):
     
     # Locations
     tables.append(Table(
-        db = Database(filename="template"),
+        db = Database(filename=filename),
         name = "locations",
         column_names = ["name", "description"],
         column_types = ["VARCHAR(255)", "TEXT"],
@@ -49,22 +49,22 @@ def table_builder(filename):
 
     # Characters
     tables.append(Table(
-        db = Database(filename="template"),
+        db = Database(filename=filename),
         name = "characters",
-        column_names = ["name", "age", "gender", "nationality", "race"],
-        column_types = ["VARCHAR(255)", "INTEGER", "VARCHAR(255)", "VARCHAR(255)", "VARCHAR(255)"],
+        column_names = ["name", "age", "gender", "nationality", "race", "description"],
+        column_types = ["VARCHAR(255)", "INTEGER", "VARCHAR(255)", "VARCHAR(255)", "VARCHAR(255)", "TEXT"],
     ))
 
     tables.append(Table(
-        db = Database(filename="template"),
+        db = Database(filename=filename),
         name = "relationships",
-        column_names = ["character1_id", "character2_id", "type"],
-        column_types = ["INTEGER", "INTEGER", "VARCHAR(255)"],
+        column_names = ["character1_id", "character2_id", "type", "description"],
+        column_types = ["INTEGER", "INTEGER", "VARCHAR(255)", "TEXT"],
     ))
 
     # # Template
     # tables.append(Table(
-    #     db = Database(filename="template"),
+    #     db = Database(filename=filename),
     #     name = "",
     #     column_names = ["", ""],
     #     column_types = ["", ""],

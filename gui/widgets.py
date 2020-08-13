@@ -63,14 +63,14 @@ class RecordLayout(QGridLayout):
     def build_layout(self):
 
         table = self.record.table
-        print(f"table = {table}")
+        # print(f"table = {table}")
         recordarray = self.record.recordarray
-        print(f"recordarray = {recordarray}")
+        # print(f"recordarray = {recordarray}")
 
         for index, columntype in enumerate(table.column_types):
 
             ctype = columntype.split(' ', 1)[0].upper()
-            print(f"ctype = {ctype}")
+            # print(f"ctype = {ctype}")
 
             # create the appropriate widget to display the value
             if ctype == "BOOL":
@@ -89,7 +89,8 @@ class RecordLayout(QGridLayout):
             elif ctype == "TEXT":
                 widget_value = QTextEdit()
                 widget_value.adjustSize()
-                widget_value.setText(recordarray[index])
+                widget_value.insertPlainText(recordarray[index])
+                # widget_value.insertHtml(recordarray[index])
 
             # elif ctype == "DATE":
             #     widget_value = QDateEdit()
@@ -120,8 +121,8 @@ class RecordLayout(QGridLayout):
             widget_title = QLabel()
             widget_title.setText(table.column_names[index])
 
-            print(f"column placements are {table.column_placement}")
-            print(f"column placements[index] are {table.column_placement[index]}")
+            # print(f"column placements are {table.column_placement}")
+            # print(f"column placements[index] are {table.column_placement[index]}")
 
             row = table.column_placement[index][0]
             column = table.column_placement[index][1] + 1
@@ -148,19 +149,22 @@ class RecordLayout(QGridLayout):
             ctype = columntype.split(' ', 1)[0].upper()
             print(f"ctype = {ctype}")
 
-            if ctype == "TEXT":
-                recordarray.append([widgets[index].text()])
+            if ctype == "VARCHAR(255)":
+                recordarray.append(widgets[index].text())
+            elif ctype == "TEXT":
+                recordarray.append(widgets[index].toPlainText())
             elif ctype == "INTEGER":
-                recordarray.append([widgets[index].value()])
+                recordarray.append(widgets[index].value())
             elif ctype == "DATE":
-                recordarray.append([widgets[index].value()])
+                recordarray.append(widgets[index].value())
             elif ctype == "BOOL":
-                recordarray.append([widgets[index].isChecked()])
-
-            record = Record(
-                table = self.table_selected,
-                recordarray = recordarray,
-            )
+                recordarray.append(widgets[index].isChecked())
+            print(f"recordarray building {recordarray}")
+        print(f"recordarray processed {recordarray}")
+        record = Record(
+            table = table,
+            recordarray = recordarray,
+        )
 
         return record
 
