@@ -399,9 +399,16 @@ class Table(object):
     def createTable(self):
 
         create_query = []
-        for index, value in enumerate(self.column_names[1:]):
-            create_query.append(f"{value} {self.column_types[index]}")
 
+        # get column info without primary key
+        column_names = self.column_names[1:]
+        column_types = self.column_types[1:]
+
+        # enumerate over column names without id column
+        for index, column_name in enumerate(column_names):
+            create_query.append(f"{column_name} {column_types[index]}")
+
+        print(f"query create table {create_query}")
         self.db.create_table(table=self.name, variables=create_query)
 
     def createRecord(self, values):
