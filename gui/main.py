@@ -42,6 +42,7 @@ from PyQt5.QtGui import (
 from guidarktheme.widget_template import *
 
 from gui.widgets import (
+    RecordLayout,
     CreateItemDialogEvent,
     CreateItemDialogStory,
     CreateItemDialogTimeline,
@@ -200,7 +201,7 @@ class WorldOverview(QMainWindow):
 
             newbtn = QPushButton()
             newbtn.setText("+")
-            newbtn.clicked.connect(self.closure_new_record(table))
+            newbtn.clicked.connect(self.closure_set_new_record_selection(table))
             box.addWidget(newbtn, 1)
 
             frame = QBorderlessFrame()
@@ -223,67 +224,34 @@ class WorldOverview(QMainWindow):
 
     def set_pagebox(self):
 
-        # we will create a formlayout with all the widgets and a seperate array with the widgets in order to manipulate them and pull values
+        pagebox = QVBoxLayout()
 
-        pagebox = QFormLayout()
+        # we will create a gridlayout of the selected record with all the widgets and a seperate array with the widgets in order to manipulate them and pull values
+        if self.record_selected != None:
+            record_layout = RecordLayout(self.record_selected)
+        else:
+            record_layout = QGridLayout()
+        record_frame = QRaisedFrame()
+        record_frame.setLayout(record_layout)
+        pagebox.addWidget(record_frame, 15)
 
-        self.pagewidgets = []
-
+        # adding a new, create or edit button
+        btn = QPushButton()
+        
         if self.table_selected != None:
-            print(f"column names {self.table_selected.column_names}")
-            print(f"column types {self.table_selected.column_types}")
-
             if self.record_selected == None:
-                # show description of table and other explenations
-                pass
-            
-            else:
-               
-                # columnrange = range(0, self.table_selected.readColumnCount())
-                # print(f"range {columnrange}")
-                print(f"recordarray = {self.record_selected.recordarray}")
+                btn.setText("New Record")
+                btn.clicked.connect(self.closure_set_new_record_selection(self.table_selected))
 
-                for c in range(0, self.table_selected.readColumnCount()):
-                    # print(f"c {c}")
-                    # print(f"column type = {self.table_selected.column_types[c]}")
-
-                    # create the appropriate widget to display and input values, both added to formlayout and to table.column_widgets
-                    if self.table_selected.column_types[c][:4].upper() == "TEXT":
-                        widget = QLineEdit()
-                        widget.setText(self.record_selected.recordarray[c])
-
-                    elif self.table_selected.column_types[c][:4].upper() == "BOOL":
-                        widget = QCheckBox()
-                        widget.setChecked(self.record_selected.recordarray[c])                            
-
-                    elif self.table_selected.column_types[c][:7].upper() == "INTEGER":
-                        widget = QSpinBox()
-                        widget.setValue(self.record_selected.recordarray[c])
-
-                    elif self.table_selected.column_types[c][:4].upper() == "DATE":
-                        widget = QDateTimeEdit()
-                        date = QDate()
-                        sqldate = self.record_selected.recordarray[c]
-                        datestring = datetime.date()
-                        date.fromString(self.record_selected.recordarray[c], 'yyyy-MM-dd')
-                        widget.setDate(date)
-
-                    else:
-                        widget = QLineEdit()
-                        widget.setText("Couldn't set widget")
-
-                    pagebox.addRow(self.table_selected.column_names[c], widget)
-                    self.pagewidgets.append(widget)
-
-                btn = QPushButton()
-                pagebox.addWidget(btn)
+            elif self.record_selected != None:
                 if self.record_selected.primarykey == -1:
-                    btn.setText("Create")
-                    btn.clicked.connect(self.create_new)
+                    btn.setText("Confirm Creation")
+                    btn.clicked.connect(self.create_record)
                 else:
-                    btn.setText("Edit")
-                    btn.clicked.connect(self.closure_update_record(self.record_selected))
+                    btn.setText("Confirm Update")
+                    btn.clicked.connect(self.update_record)
 
+            pagebox.addWidget(btn, 1)
 
         pageboxframe = QRaisedFrame()
         pageboxframe.setLayout(pagebox)
@@ -427,9 +395,9 @@ class WorldOverview(QMainWindow):
         self.record_selected = record
         self.initUI()
 
-    def closure_new_record(self, selected):
+    def closure_set_new_record_selection(self, selected):
 
-        def new_record():
+        def set_new_record_selection():
                 
             self.table_selected = selected
 
@@ -439,43 +407,31 @@ class WorldOverview(QMainWindow):
             self.record_selected = Record(self.table_selected, newarray)
             self.initUI()
 
-        return new_record
+        return set_new_record_selection
 
-    def create_new(self):
+    def create_record(self):
 
-        recordarray = self.getwidgetvalues()
+        # get a Record object for the new record
+        newrecord = self.getwidgetvalues()
 
-        record = self.table_selected.createRecord(recordarray=recordarray)
+        # create the new record in database and retrieve the new record from database
+        record = self.newrecord.table.createRecord(values=newrecord.values)
+
+        # set the selected record to the new record
         self.set_record_selection(record)
+
         self.initUI()
 
-    def closure_update_record(self, record):
+    def update_record(self):
 
-        def update_record():
-            
-            recordarray = self.getwidgetvalues()
-            
-            record = self.table_selected.updateRecord(recordarray=recordarray, select=self.record_selected.primarykey)
-            self.set_record_selection(record)
-            self.initUI()
+        # get a Record object for the new record
+        updaterecord = self.getwidgetvalues()
+        
+        # update the record in database and retrieve the updated record from database
+        record = self.table_selected.updateRecordbyID(rowid=updaterecord.primarykey, valuepairs=updaterecord.recordarray)
 
-        return update_record
-
-    def getwidgetvalues(self):
-        names = self.table_selected.column_names
-        types = self.table_selected.column_types
-        widgets = self.pagewidgets
-
-        recordarray = []
-        for i in range(len(types)):
-            if types[i][:4].upper() == "TEXT":
-                recordarray.append([names[i],widgets[i].text()])
-            elif types[i][:7].upper() == "INTEGER":
-                recordarray.append([names[i],widgets[i].value()])
-            elif types[i][:4].upper() == "DATE":
-                recordarray.append([names[i],widgets[i].value()])
-            elif types[i][:4].upper() == "BOOL":
-                recordarray.append([names[i],widgets[i].isChecked()])
+        self.set_record_selection(record)
+        self.initUI()
 
 def run():
     global app

@@ -8,6 +8,7 @@ from shutil import copyfile
 import sqlite3
 from sqlite3 import Error
 
+
 # https://stackoverflow.com/questions/2047814/is-it-possible-to-store-python-class-objects-in-sqlite
 
 def get_localpath():
@@ -95,7 +96,11 @@ class Database(object):
             print(f"The error '{e}' occurred")
 
     def delete_database(self):
-        pass
+
+        self.connection.close()
+
+        completepath = os.path.join(self.path, self.filename + ".sqlite")
+        os.remove(completepath)
 
     def execute_query(self, query):
         cursor = self.connection.cursor()
@@ -200,17 +205,17 @@ class Database(object):
 
         return records
 
-    def update_record(self, table = "test", recordarray = [["integer", 3], ["text",'test']], where=""):
+    def update_records(self, table = "test", valuepairs = [["integer", 3], ["text",'test']], where=""):
 
-        setrecordarray = ""
-        for valuearray in recordarray:
+        setvaluepairs = ""
+        for valuearray in valuepairs:
             if isinstance(valuearray[1], str):
-                setrecordarray += f"{valuearray[0]} = '{valuearray[1]}',\n"
+                setvaluepairs += f"{valuearray[0]} = '{valuearray[1]}',\n"
             else:
-                setrecordarray += f"{valuearray[0]} = {valuearray[1]},\n"
+                setvaluepairs += f"{valuearray[0]} = {valuearray[1]},\n"
             
-        setrecordarray = setrecordarray[:-2]
-        # print(f"setrecordarray {setrecordarray}")
+        setvaluepairs = setvaluepairs[:-2]
+        # print(f"setvaluepairs {setvaluepairs}")
 
         inpart = ""
         for s in where[1]:
@@ -224,12 +229,12 @@ class Database(object):
         where = f"{where[0]} IN ({inpart})"
         # print(f"where = {where}")
 
-        update_query = f"UPDATE {table} SET\n{setrecordarray}\nWHERE\n{where}\n;"
+        update_query = f"UPDATE {table} SET\n{setvaluepairs}\nWHERE\n{where}\n;"
         self.execute_query(update_query)
 
     def get_records_array(self, sqlrecords):
 
-        records = []
+        recordarrays = []
 
         for sqlrecord in sqlrecords:
             recordarray = []
@@ -237,9 +242,9 @@ class Database(object):
             for value in sqlrecord:
                 recordarray += [value]
 
-            records += [recordarray]
+            recordarrays += [recordarray]
 
-        return records
+        return recordarrays
 
     def get_max_row(self, table):
 
@@ -249,7 +254,7 @@ class Database(object):
         return lastrow
 
 class Table(object):
-    def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = []):
+    def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = [], column_placement = []):
         super().__init__()
 
         # connect to database
@@ -273,26 +278,51 @@ class Table(object):
         self.column_types = ["INTEGER"] + self.column_types
         self.column_names = ["id"] + self.column_names
 
-        if defaults != []:
-            self.defaults = [-1] + defaults
-        else:
-            self.defaults = []
-            for c in range(0, self.readColumnCount()):
-                if self.column_types[c][:4].upper() == "TEXT":
-                    default = [""]
-                elif self.column_types[c][:4].upper() == "BOOL":
-                    default = [False]
-                elif self.column_types[c][:4].upper() == "DATE":
-                    default = [datetime.date.today]
-                else:
-                    default = [0]
-                self.defaults += default
-            # print(f"defaults set are {self.defaults}")
+        self.set_defaults(defaults)
+        self.set_column_placement(column_placement)
 
         # initiate records
         self.initial_records = initial_records
         if self.initial_records != []:
             self.createRecords(records=self.initial_records)
+
+    def set_defaults(self, defaults):
+        if defaults != []:
+            self.defaults = [-1] + defaults
+        else:
+            self.defaults = []
+
+            self.defaults += [-1]
+            for index, value in enumerate(self.column_types[1:]):
+                ctype = value.split(' ', 1)[0].upper()
+
+                if ctype == "INTEGER":
+                    default = [0]
+                elif ctype == "BOOL":
+                    default = [False]
+                elif ctype == "DATE":
+                    default = [datetime.date.today]
+                else:
+                    default = [""]
+
+                self.defaults += default
+
+            print(f"defaults set are {self.defaults}")
+        
+    def set_column_placement(self, column_placement):
+
+        if column_placement != []:
+            id_placement = [0,0,1,1]
+            self.column_placement = [id_placement] + column_placement
+
+        else:
+            self.column_placement = []
+
+            for index, value in enumerate(self.column_names):
+                indexconfig = [index,0,1,1]
+                self.column_placement += [indexconfig]
+
+            print(f"column_placement set are {self.column_placement}")
 
     def readColumnCount(self, includepk=True):
         """including private key column"""
@@ -400,15 +430,44 @@ class Table(object):
 
             return recordobjects
 
-    def updateRecord(self, recordarray, select):
+    def updateRecordbyID(self, rowid, valuepairs):
+
+        # get a selectstatement from just the rowid
+        select = ["id", [rowid]]
+
+        # get record before updating
+        record_before = self.readRecords(select=select)[0]
+        # print(f"record before = {record_before}")
+
+        # update the record
+        # print(valuepairs)
+        self.db.update_records(table=self.name, valuepairs=valuepairs, where=select)
+
+        # get record after updating
+        record_after = self.readRecords(select=select)[0]
+        # print(f"record after = {record_after}")
+
+        if record_before.primarykey != record_after.primarykey:
+            print(f"Update messed up the table!!!")
+            return
+
+        record_object = record_after
+        if record_before.values != record_after.values:
+            print(f"updated record {record_object.recordarray}")
+        else:
+            print(f"update record was not necessary")
+
+        return record_object
+
+    def updateRecords(self, valuepairs, select):
 
         table_before = self.readRecords()
         # print(f"table before = {table_before}")
 
-        # print(f"valueparis = {recordarray}")
-        for valuearray in recordarray:
+        # print(f"valueparis = {valuepairs}")
+        for valuearray in valuepairs:
             valuearray[1] = self.transform_boolean(valuearray[1])
-        # print(f"recordarray = {recordarray}")
+        # print(f"valuepairs = {valuepairs}")
 
         if isinstance(select, int):
             select = ["id", [select]]
@@ -418,21 +477,21 @@ class Table(object):
             select[1][v] = self.transform_boolean(select[1][v])
         # print(f"select {select}")
 
-        self.db.update_record(table=self.name, recordarray=recordarray, where=select)
+        self.db.update_records(table=self.name, valuepairs=valuepairs, where=select)
                     
         table_after = self.readRecords()
         # print(f"table after = {table_after}")
 
         record_objects = []
         for index, record in enumerate(table_after):
-            if table_before[index].primarykey != table_after[index].primarykey:
+            if table_before[index].primarykey != record.primarykey:
                 print(f"Update messed up the table!!!")
                 return
-            if table_before[index].values != table_after[index].values:
+            if table_before[index].values != record.values:
                 record_objects += [table_after[index]]
-        # print(f"updated rows {record_objects}")
-
-        return record_objects
+                for row in record_objects:
+                    print(f"updated row {row.recordarray}")
+                return record_objects
 
     def transform_boolean(self, value):
         if value == True:
@@ -442,31 +501,64 @@ class Table(object):
         return value
 
 class Record(object):
-    def __init__(self, table, record):
+    def __init__(self, table, recordarray):
         super().__init__()
 
         """
-        class that collects a record / row of a table, including a reference to that table. 
-        It splits conveniently the complete record / row in 3 parts.
-        - the complete 'recordarray' containing all values, including the primary key and foreign keys
-        - the primary key only
-        - the foreign keys only (Not implemented)
-        - the values only
+        Primarykey: 
+        primary key of this record
+
+        Recordarray: 
+        array of values
+        including the primary key
+
+        Recordpairs: 
+        array of column - value pairs
+        including the primary key column
+        
+        Values: 
+        array of all values
+        excluding the primary key
+        
+        Valuepairs: 
+        array of column - value pairs
+        excluding the primary key column
 
         With Record.get_dict() command you get the record in dictionary format where
         you can search easily based on column name
         """
 
         self.table = table
-        self.recordarray = record
-        self.primarykey = record[0]
-        self.values = record[1:]
-        
+        self.primarykey = recordarray[0]
+
+        self.recordarray = recordarray
+        self.values = recordarray[1:]
+        self.setrecordpairs()
+        self.setvaluepairs()
+
+    def setrecordpairs(self):
+        self.recordpairs = []
+        for index, name in enumerate(self.table.column_names):
+            recordpair = [name, self.recordarray[index]]
+            self.recordpairs += [recordpair]
+        print(f"set recordpairs {self.recordpairs}")
+
+    def setvaluepairs(self):
+        self.valuepairs = []
+        for index, name in enumerate(self.table.column_names[1:]):
+            valuepair = [name, self.recordarray[1:][index]]
+            self.valuepairs += [valuepair]
+        print(f"set valuepairs {self.valuepairs}")
+
+
 def print_records(records):
     for record in records:
-        print(f"-table: {record.table}, primarykey: {record.primarykey}, values: {record.values}")
+        print(f"-table: {record.table}, primarykey: {record.primarykey}, recordpairs: {record.recordpairs}")
 
 if __name__ == "__main__":
+
+    database = Database(path="", filename="science")
+    database.delete_database()
 
     newtbl = Table(
         db = Database(path="", filename="science"),
@@ -498,24 +590,19 @@ if __name__ == "__main__":
     print(f"read all records")
     print_records(records)
 
-    columns = [2]
-    records = newtbl.readRecords(columns=columns)
-    print(f"read with specific columns")
-    print_records(records)
-
     selection = ["nobelprizewinner", [True]]
     records = newtbl.readRecords(select=selection)
     print(f"read selection")
     print_records(records)
 
-    recordarray = [["nobelprizewinner", False]]
+    valuepairs = [["nobelprizewinner", False]]
     selection = ["nobelprizewinner", [True]]
-    records = newtbl.updateRecord(recordarray=recordarray, select=selection)
+    records = newtbl.updateRecords(valuepairs=valuepairs, select=selection)
     print(f"update true to false")
     print_records(records)
 
-    recordarray = [["name", "Neil deGrasse Tyson"], ["age", 40]]
-    selection = 4
-    records = newtbl.updateRecord(recordarray=recordarray, select=selection)
+    valuepairs = [["name", "Neil deGrasse Tyson"], ["age", 40]]
+    rowid = 4
+    record = newtbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
     print(f"update record 'id = 4'")
-    print_records(records)
+    print_records([record])
