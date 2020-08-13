@@ -390,10 +390,10 @@ class WorldOverview(QMainWindow):
     def update_record(self):
 
         # get a Record object for the new record
-        updaterecord = self.getwidgetvalues()
-        
+        updaterecord = self.record_layout.processValues()
+
         # update the record in database and retrieve the updated record from database
-        record = self.table_selected.updateRecordbyID(rowid=updaterecord.primarykey, valuepairs=updaterecord.recordarray)
+        record = self.table_selected.updateRecordbyID(rowid=updaterecord.primarykey, valuepairs=updaterecord.valuepairs)
 
         self.set_record_selection(record)
         self.initUI()
