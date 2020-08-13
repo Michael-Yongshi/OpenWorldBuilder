@@ -102,7 +102,25 @@ class Database(object):
         completepath = os.path.join(self.path, self.filename + ".sqlite")
         os.remove(completepath)
 
+        print(f"Database deleted!")
+
     def execute_query(self, query):
+        """
+        build a parameterised query:
+        for a parameter list of 3 length like below
+        -parameters = [1,2,3]
+        -placeholders = ', '.join('?' for _ in parameters)
+        this results in '?, ?, ?'
+
+        meaning
+        for each (_ denotes an unused variable) in parameters, join the strings ('?') with a comma and a space (', ') in order to not have to remove a trailing comma
+
+        then merge with query
+        -query= 'SELECT name FROM students WHERE id IN (%s)' % placeholders
+
+        meaning
+        this replaces the "%s with our placeholders ('?, ?, ?' in our case)
+        """
         cursor = self.connection.cursor()
 
         try:
@@ -116,50 +134,60 @@ class Database(object):
         except Error as e:
             print(f"The error '{e}' occurred")
 
+    def execute_parameterised_query(self, query, parameters):
+        cursor = self.connection.cursor()
+
+        try:
+            print(f"--------------------query\n{query}\n")
+            print(f"--------------------parameters\n{parameters}\n")
+            cursor.execute(query, parameters)
+            self.connection.commit()
+            print("Success!\n--------------------")
+
+            return cursor
+
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
     def create_table(self, table = "test", variables = ["integer INTEGER","text TEXT"]):
-
-        if table == "test":
-            drop_test_table = f"DROP TABLE IF EXISTS test;"
-            self.execute_query(drop_test_table)
-
-        "create variables text"
-        valuetext = ""
-        for variable in variables:
-            valuetext += f"{variable},\n"
-        valuetext = valuetext[:-2]
-
-        create_table = f"CREATE TABLE IF NOT EXISTS {table}(\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);"
-        self.execute_query(create_table)
-
-    def create_records(self, table = "test", records = [[1,'test'], [2, 'test']]):
-
-        columns = self.read_column_names(table)[1:]
-        # print(f"columns of table {table} are {columns}")
-        column_count = len(columns)
-        # print(f"column count = {column_count}")
+        """
+        collects input of table name and column information
+        builds a single query and 
+        forwards to execute_query
+        """
         
-        column_text = ""
-        for i in range(column_count):
-            column_text += f"{columns[i]},"
-        column_text = column_text[:-1]
-        # print(column_text)
+        # transform variables to string format
+        valuetext = ',\n'.join(variables)
 
-        # print(records)  
+        # create variables text
+        query = f"CREATE TABLE IF NOT EXISTS {table} (\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);"
+        self.execute_query(query)
+
+    def create_records(self, table = "test", column_names = ["integer", "text"], records = [[1,'test'], [2, 'test']]):
+        
+        print(f"create records database with table {table}, columns {column_names} and records {records}")
+
+        # transform column names to a string
+        column_text = ', '.join(column_names)
+
+        # transforms the records to string format
         records_text = ""
         for record in records:
 
             record_text = ""
-            for i in range(column_count):
-                if isinstance(record[i], str):
-                    record_text += f"'{record[i]}', "
+            for value in record:
+
+                if isinstance(value, str):
+                    record_text += f"'{value}', "
                 else:
-                    record_text += f"{record[i]}, "
+                    record_text += f"{value}, "
                 # print(f"i = {i} with {record_text}")
             record_text = record_text[:-2]
             # print(f"record text = {record_text}")
 
             records_text += f"({record_text}),"
             # print(records_text)
+
         records_text = records_text[:-1]
         # print(records_text)
 
@@ -277,10 +305,9 @@ class Table(object):
         # create tables in database
         self.createTable()
 
-        self.initial_records = initial_records
         # initiate records
-        if self.initial_records != []:
-            self.createRecords(records=self.initial_records)
+        if initial_records != []:
+            self.createRecords(records=initial_records)
 
     def move_to_database(self, db):
 
@@ -397,8 +424,12 @@ class Table(object):
         return records
 
     def createTable(self):
+        """
+        gathers the table name and the column info and then forwards them to
+        create_table method of the Database object
+        """
 
-        create_query = []
+        columns = []
 
         # get column info without primary key
         column_names = self.column_names[1:]
@@ -406,22 +437,31 @@ class Table(object):
 
         # enumerate over column names without id column
         for index, column_name in enumerate(column_names):
-            create_query.append(f"{column_name} {column_types[index]}")
+            columns.append(f"{column_name} {column_types[index]}")
 
-        print(f"query create table {create_query}")
-        self.db.create_table(table=self.name, variables=create_query)
+        print(f"query create table {columns}")
+        self.db.create_table(table=self.name, variables=columns)
 
     def createRecord(self, values):
+        """
+        collects an array of values for a single record
+        package it in an array of 1 record and then
+        forwards it to the create_records method of Database
 
+        It returns the last row as a Record object
+        """
+
+        # print(f"values {values}")
         for index, value in enumerate(values):
             values[index] = self.transform_boolean(value)
-        # print(values)
+        records = [values]
 
-        self.db.create_records(table=self.name, records=[values])
+        self.db.create_records(table=self.name, column_names=self.column_names[1:], records=records)
 
         newrows_last = self.db.get_max_row(self.name)
 
         sqlrecords = self.db.read_records(table=self.name, where=f"id = {newrows_last}")
+        print(f"sqlrecords = {sqlrecords}")
         recordobject = Record(self, sqlrecords[0])
 
         return recordobject
@@ -435,12 +475,13 @@ class Table(object):
         else:
             newrows_first = self.db.get_max_row(self.name) + 1
 
+            # print(f"table createRecords before transform {records}")
             for rindex, record in enumerate(records):
                 for vindex, value in enumerate(record):
                     records[rindex][vindex] = self.transform_boolean(value)
             # print(records)
-
-            self.db.create_records(table=self.name, records=records)
+            # print(f"table createRecords records {records}")
+            self.db.create_records(table=self.name, column_names=self.column_names[1:], records=records)
 
             newrows_last = self.db.get_max_row(self.name)
             whererange = range(newrows_first, newrows_last + 1)
@@ -585,8 +626,14 @@ def print_records(records):
 
 if __name__ == "__main__":
 
-    database = Database(path="", filename="science")
-    database.delete_database()
+    # l = [1,2,3]
+    # placeholder= '?' # For SQLite. See DBAPI paramstyle.
+    # placeholders= ', '.join(placeholder for _ in l)
+    # query= f'SELECT name FROM students WHERE id IN ({placeholders})'
+    # print(query)
+
+    db = Database(path="", filename="science")
+    db.delete_database()
 
     newtbl = Table(
         db = Database(path="", filename="science"),
@@ -594,7 +641,8 @@ if __name__ == "__main__":
         column_names = ["name", "age", "nobelprizewinner"],
         column_types = ["Text", "Integer", "Bool"],
         initial_records = [
-            ["Hawking", 68, True]
+            ["Hawking", 68, True],
+            ["Edison said \"Apple!\"", 20, True],
         ]
     )
     
@@ -629,7 +677,7 @@ if __name__ == "__main__":
     print(f"update true to false")
     print_records(records)
 
-    valuepairs = [["name", "Neil deGrasse Tyson"], ["age", 40]]
+    valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
     rowid = 4
     record = newtbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
     print(f"update record 'id = 4'")
