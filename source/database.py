@@ -163,36 +163,48 @@ class Database(object):
         query = f"CREATE TABLE IF NOT EXISTS {table} (\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);"
         self.execute_query(query)
 
-    def create_records(self, table = "test", column_names = ["integer", "text"], records = [[1,'test'], [2, 'test']]):
+    def create_records(self, table = "test", column_names = ["integer", "text"], valuepairs = [[1,'test'], [2, 'test']]):
         
-        print(f"create records database with table {table}, columns {column_names} and records {records}")
+        print(f"create records database with table {table}, columns {column_names} and valuepairs {valuepairs}")
 
         # transform column names to a string
         column_text = ', '.join(column_names)
 
-        # transforms the records to string format
-        records_text = ""
-        for record in records:
+        # transforms the valuepairs to string format
+        # valuepairs_text = ""
+        # for valuepair in valuepairs:
 
-            record_text = ""
-            for value in record:
+        #     valuepair_text = ""
+        #     for value in valuepair:
 
-                if isinstance(value, str):
-                    record_text += f"'{value}', "
-                else:
-                    record_text += f"{value}, "
-                # print(f"i = {i} with {record_text}")
-            record_text = record_text[:-2]
-            # print(f"record text = {record_text}")
+        #         if isinstance(value, str):
+        #             valuepair_text += f"'{value}', "
+        #         else:
+        #             valuepair_text += f"{value}, "
+        #         # print(f"i = {i} with {valuepair_text}")
+        #     valuepair_text = valuepair_text[:-2]
+        #     # print(f"valuepair text = {valuepair_text}")
 
-            records_text += f"({record_text}),"
-            # print(records_text)
+        #     valuepairs_text += f"({valuepair_text}),"
+        #     # print(valuepairs_text)
 
-        records_text = records_text[:-1]
-        # print(records_text)
+        # valuepairs_text = valuepairs_text[:-1]
+        # # print(valuepairs_text)
 
-        create_record = f"INSERT INTO {table}\n({column_text})\nVALUES\n{records_text}\n;"
-        self.execute_query(create_record)
+        # create placeholders
+        placeholders = ""
+        parameters = ()
+        for valuepair in valuepairs:
+            valuepair_parameters = tuple(valuepair)
+            parameters += valuepair_parameters
+            valuepair_placeholders = '(' + ','.join('?' for value in valuepair) + '),\n'
+            placeholders += valuepair_placeholders
+        placeholders = placeholders[:-2]
+        print(f"placeholders = {placeholders}")
+        print(f"parameters = {parameters}")
+
+        query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
+        self.execute_parameterised_query(query, parameters)
 
     def read_table_names(self):
 
@@ -235,15 +247,27 @@ class Database(object):
 
     def update_records(self, table = "test", valuepairs = [["integer", 3], ["text",'test']], where=""):
 
-        setvaluepairs = ""
-        for valuearray in valuepairs:
-            if isinstance(valuearray[1], str):
-                setvaluepairs += f"{valuearray[0]} = '{valuearray[1]}',\n"
-            else:
-                setvaluepairs += f"{valuearray[0]} = {valuearray[1]},\n"
+        # setvaluepairs = ""
+        # for valuearray in valuepairs:
+        #     if isinstance(valuearray[1], str):
+        #         setvaluepairs += f"{valuearray[0]} = '{valuearray[1]}',\n"
+        #     else:
+        #         setvaluepairs += f"{valuearray[0]} = {valuearray[1]},\n"
             
-        setvaluepairs = setvaluepairs[:-2]
+        # setvaluepairs = setvaluepairs[:-2]
         # print(f"setvaluepairs {setvaluepairs}")
+
+        # create placeholders
+        placeholders = ""
+        parameters = ()
+        for record in valuepairs:
+            record_parameters = tuple(record)
+            parameters += record_parameters
+            record_placeholders = '(' + ' = '.join('?' for value in record) + '),\n'
+            placeholders += record_placeholders
+        placeholders = placeholders[:-2]
+        print(f"placeholders = {placeholders}")
+        print(f"parameters = {parameters}")
 
         inpart = ""
         for s in where[1]:
@@ -257,8 +281,8 @@ class Database(object):
         where = f"{where[0]} IN ({inpart})"
         # print(f"where = {where}")
 
-        update_query = f"UPDATE {table} SET\n{setvaluepairs}\nWHERE\n{where}\n;"
-        self.execute_query(update_query)
+        query = f"UPDATE {table} SET\n{placeholders}\nWHERE\n{where}\n;"
+        self.execute_parameterised_query(query, parameters)
 
     def get_records_array(self, sqlrecords):
 
@@ -454,9 +478,9 @@ class Table(object):
         # print(f"values {values}")
         for index, value in enumerate(values):
             values[index] = self.transform_boolean(value)
-        records = [values]
+        valuepairs = [values]
 
-        self.db.create_records(table=self.name, column_names=self.column_names[1:], records=records)
+        self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=valuepairs)
 
         newrows_last = self.db.get_max_row(self.name)
 
@@ -481,7 +505,7 @@ class Table(object):
                     records[rindex][vindex] = self.transform_boolean(value)
             # print(records)
             # print(f"table createRecords records {records}")
-            self.db.create_records(table=self.name, column_names=self.column_names[1:], records=records)
+            self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=records)
 
             newrows_last = self.db.get_max_row(self.name)
             whererange = range(newrows_first, newrows_last + 1)
@@ -626,6 +650,11 @@ def print_records(records):
 
 if __name__ == "__main__":
 
+    # string = """ "I am Inevitable" said Thanos' maid."""
+    # # string.replace('"', '\\"')
+    # # string.replace("'", "\\'")
+    # print(string)
+
     # l = [1,2,3]
     # placeholder= '?' # For SQLite. See DBAPI paramstyle.
     # placeholders= ', '.join(placeholder for _ in l)
@@ -642,7 +671,7 @@ if __name__ == "__main__":
         column_types = ["Text", "Integer", "Bool"],
         initial_records = [
             ["Hawking", 68, True],
-            ["Edison said \"Apple!\"", 20, True],
+            ["Edison's child said \"Apple!\"", 20, True],
         ]
     )
     

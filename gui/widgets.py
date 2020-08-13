@@ -150,15 +150,18 @@ class RecordLayout(QGridLayout):
             print(f"ctype = {ctype}")
 
             if ctype == "VARCHAR(255)":
-                recordarray.append(widgets[index].text())
+                string = self.processText(widgets[index].text())
+                recordarray.append(string)
             elif ctype == "TEXT":
-                recordarray.append(widgets[index].toPlainText())
+                string = self.processText(widgets[index].toPlainText())
+                recordarray.append(string)
             elif ctype == "INTEGER":
                 recordarray.append(widgets[index].value())
             elif ctype == "DATE":
                 recordarray.append(widgets[index].value())
             elif ctype == "BOOL":
                 recordarray.append(widgets[index].isChecked())
+
             print(f"recordarray building {recordarray}")
         print(f"recordarray processed {recordarray}")
         record = Record(
@@ -167,6 +170,18 @@ class RecordLayout(QGridLayout):
         )
 
         return record
+
+    def processText(self, string):
+        
+        string = f"""{string}"""
+        
+        # escaping double quotes
+        string.replace('"', '\\"')
+
+        # escaping single quotes
+        string.replace("'", "\\'")
+
+        return string
 
 class CreateItemDialogStory(QDialog):
     def __init__(self, parent=None):
