@@ -44,11 +44,6 @@ from guidarktheme.decorators import Decorators
 
 from gui.widgets import (
     RecordLayout,
-    CreateItemDialogEvent,
-    CreateItemDialogStory,
-    CreateItemDialogTimeline,
-    CreateItemDialogLocation,
-    CreateItemDialogCharacter,
 )
 
 from source.tablebuilder import table_builder
@@ -183,7 +178,7 @@ class WorldOverview(QMainWindow):
         navbox.addWidget(filenamelabel)
 
         listwidget = QListWidget()
-        print(f"table records {self.table_records}")
+        # print(f"table records {self.table_records}")
         if self.table_records != []:
             for record in self.table_records:
                 name = record.values[0] # take name as first value after primary key
@@ -354,7 +349,7 @@ class WorldOverview(QMainWindow):
         if self.table_selected != None:
 
             self.table_records = self.table_selected.readRecords()
-            print(self.table_records)
+            # print(self.table_records)
     
     def closure_nav_selection(self, selected):
         
@@ -383,7 +378,7 @@ class WorldOverview(QMainWindow):
             self.table_selected = selected
 
             newarray = self.table_selected.defaults
-            print(f"newarray {newarray}")
+            # print(f"newarray {newarray}")
 
             self.record_selected = Record(self.table_selected, newarray)
             self.initUI()
@@ -395,11 +390,11 @@ class WorldOverview(QMainWindow):
 
         # get a Record object for the new record
         newrecord = self.record_layout.processValues()
-        print(f"newrecord {newrecord.recordarray}")
+        # print(f"newrecord {newrecord.recordarray}")
 
         # create the new record in database and retrieve the new record from database
         record = newrecord.table.createRecord(values=newrecord.values)
-        print(f"record {newrecord.recordarray}")
+        # print(f"record {newrecord.recordarray}")
         # set the selected record to the new record
         self.set_record_selection(record)
 
