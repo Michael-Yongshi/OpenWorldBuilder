@@ -491,7 +491,7 @@ class Table(object):
         where = [["id",[newrows_last]]]
 
         sqlrecords = self.db.read_records(table=self.name, where=where)
-        # print(f"sqlrecords = {sqlrecords}")
+        print(f"Records created: {sqlrecords}")
         recordobject = Record(self, sqlrecords[0])
 
         return recordobject
@@ -505,12 +505,6 @@ class Table(object):
         else:
             newrows_first = self.db.get_max_row(self.name) + 1
 
-            # # print(f"table createRecords before transform {records}")
-            # for rindex, record in enumerate(records):
-            #     for vindex, value in enumerate(record):
-            #         records[rindex][vindex] = self.transform_boolean(value)
-            # # print(records)
-            # print(f"table createRecords records {records}")
             self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=records)
 
             newrows_last = self.db.get_max_row(self.name)
@@ -519,10 +513,11 @@ class Table(object):
             # print(f"wherevalues = {wherevalues}")
             where = [["id",wherevalues]]
 
-            records = self.db.read_records(table=self.name, where=where)
+            sqlrecords = self.db.read_records(table=self.name, where=where)
+            print(f"Records created: {sqlrecords}")
 
             recordobjects = []
-            for record in records:
+            for record in sqlrecords:
                 recordobjects += [Record(self, record)]
 
             return recordobjects
@@ -549,10 +544,10 @@ class Table(object):
             return
 
         record_object = record_after
-        # if record_before.values != record_after.values:
-        #     # print(f"updated record {record_object.recordarray}")
-        # else:
-        #     # print(f"update record was not necessary")
+        if record_before.values != record_after.values:
+            print(f"updated record {record_object.recordarray}")
+        else:
+            print(f"update record was not necessary")
 
         return record_object
 
@@ -584,12 +579,12 @@ class Table(object):
         record_objects = []
         for index, record in enumerate(table_after):
             if table_before[index].primarykey != record.primarykey:
-                # print(f"Update messed up the table!!!")
+                print(f"Update messed up the table!!!")
                 return
             if table_before[index].values != record.values:
                 record_objects += [table_after[index]]
-                # for row in record_objects:
-                    # print(f"updated row {row.recordarray}")
+                for row in record_objects:
+                    print(f"updated row {row.recordarray}")
                 return record_objects
 
     # def transform_boolean(self, value):
