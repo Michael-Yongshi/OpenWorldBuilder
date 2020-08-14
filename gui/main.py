@@ -78,8 +78,9 @@ class WorldOverview(QMainWindow):
         self.setWindowIcon(QIcon('globe-23544_640.ico'))
 
         # file settings
-        self.filename = "Template" # initializing template database
-        self.tables = table_builder(self.filename) # list of Table objects by default filled with a new sql database
+        self.filename = None # initializing template database
+        self.tables = [] # list of Table objects by default filled with a new sql database
+        # self.tables = table_builder(self.filename)
 
         # selection settings
         self.table_selected = None # Table object
@@ -146,22 +147,27 @@ class WorldOverview(QMainWindow):
 
     def initUI(self):     
         
-        # get records from database if there is a table selected
-        self.get_records()
-
         # build overview
         nested_widget = self.set_nested_widget()
 
         self.setCentralWidget(nested_widget)
         self.showMaximized()
 
+        # build a startup window if filename is empty
+        if self.filename == None:
+            self.open_database(filename="")
+
     def set_nested_widget(self):
 
-        # vertical layout for left and right part
         overviewbox = QGridLayout()
 
-        overviewbox.addWidget(self.set_navbox(), 0, 0, 3, 1)
-        overviewbox.addWidget(self.set_pagebox(), 0, 1, 3, 3)
+        if self.filename != None:
+            # get records from database if there is a table selected
+            self.get_records()
+            
+            # vertical layout for left and right part
+            overviewbox.addWidget(self.set_navbox(), 0, 0, 3, 1)
+            overviewbox.addWidget(self.set_pagebox(), 0, 1, 3, 3)
 
         overviewboxframe = QBorderlessFrame()
         overviewboxframe.setLayout(overviewbox)
@@ -276,9 +282,9 @@ class WorldOverview(QMainWindow):
     def new_database(self):
         """Create a new world"""
 
-        if self.filename != "Template":
+        if self.filename != None:
             confirm = QMessageBox.question(self, 'Are you sure?', f"There is currently a world loaded.\nDo you want to create a new world?", QMessageBox.Yes | QMessageBox.No)
-            if confirm != QMessageBox.No:
+            if confirm == QMessageBox.No:
                 return
 
         name, okPressed = QInputDialog.getText(self, "Create", "Name your world:")
@@ -289,20 +295,26 @@ class WorldOverview(QMainWindow):
             else:
                 QMessageBox.warning(self, "Couldn't create world!", f"database with {name} already exists!", QMessageBox.Ok)
 
-    def open_database(self, filename):
+    def open_database(self, filename=""):
 
         # if filename is not given
-        if filename == False:
+        if filename == "" or filename == False:
+
             # get list of save files /databases
             path, files = show_files()
+            names = ["* New world"] + files
 
             # Let user choose out of save files
-            name, okPressed = QInputDialog.getItem(self, "Choose", "Choose your world", files, 0, False)
+            name, okPressed = QInputDialog.getItem(self, "Choose", "Choose your world", names, 0, False)
             if okPressed and name:
-                filename = name
+                if name == "* New world":
+                    self.new_database()
+                    return
+                else:
+                    filename = name
 
-        if filename != "":
-            
+        if filename != "" and filename != None:
+            print(filename)
             # clean data
             self.tables = []
             self.table_selected = None # Table object
@@ -339,7 +351,7 @@ class WorldOverview(QMainWindow):
         self.record_selected = None
 
         # create new template database
-        self.open_database(filename="Template")
+        self.filename = None
         self.initUI()
 
     def get_records(self):
