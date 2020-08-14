@@ -85,7 +85,7 @@ class RecordLayout(QGridLayout):
                     fkfound = True
 
                     widget_value = QComboBox()
-                    foreign_valuepairs = self.getForeignValues(column_name=[cname])
+                    foreign_valuepairs = self.record.table.readForeignValues(column=cname)
 
                     for indexvp, valuepair in enumerate(foreign_valuepairs):
                         print(f"indexvp {indexvp}, valuepair {valuepair}")
@@ -168,19 +168,6 @@ class RecordLayout(QGridLayout):
 
             # add the value widget to the list of widgets for easy access of values
             self.widgets.append(widget_value)
-
-    def getForeignValues(self, column_name):
-
-        foreign_valuepairs = []
-        maxrow = 4
-        # print(f"maxrow {maxrow}")
-        for c in range(1, maxrow):
-            valuepair = [c, f"name {c}"]
-            foreign_valuepairs += [valuepair]
-
-        # print(f"foreign values {foreign_valuepairs}")
-        return foreign_valuepairs
-        # self.record.table.readForeignValues(column_name)
 
     def processValues(self):
         """

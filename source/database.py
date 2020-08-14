@@ -451,6 +451,44 @@ class Table(object):
 
         return records
 
+    def readForeignValues(self, column):
+        """
+        collects foreign values for a foreign key of this table
+        checks if the given column is a foreign key
+        checks what table and column this foreign key is pointing to
+        checks the table and retrieves the column values
+        creates recordarrays of these values
+        returns the recordarrays
+        """
+
+        columnindex = self.column_names.index(column)
+        split = self.column_types[columnindex].split(' ', 3)
+        if len(split) != 3:
+            return
+        
+        if split[1].upper() != "REFERENCES":
+            return
+        
+        ftable = split[2].split('(',1)[0]
+        print(f"foreign table {ftable}")
+
+        # fcolumn = split[2].split('(',1)[1][:-1]
+        # print(f"foreign column {fcolumn}")
+
+        fcolumn_names = self.db.read_column_names(table=ftable)
+        print(f"fcolumn names {fcolumn_names}")
+
+        sqltable = self.db.read_records(table=ftable, columns = [])
+        print(f"all table records {sqltable}")
+
+        # by default just assuming we are pointing to primary key in first column and second column contains something meaningfull
+        fcolumns = [fcolumn_names[0], fcolumn_names[1]]
+        sqlcolumns = self.db.read_records(table=ftable, columns = fcolumns)
+
+        print(f"all table records with foreign key column {sqlcolumns}")
+
+        return sqlcolumns
+
     def createTable(self):
         """
         gathers the table name and the column info and then forwards them to
@@ -664,7 +702,7 @@ if __name__ == "__main__":
     db = Database(path="", filename="science")
     db.delete_database()
 
-    newtbl = Table(
+    charbl = Table(
         db = Database(path="", filename="science"),
         name = "scientists",
         column_names = ["name", "age", "nobelprizewinner"],
@@ -676,10 +714,10 @@ if __name__ == "__main__":
     )
     
     #test functions of table
-    print(f"read column names: {newtbl.column_names}")
+    print(f"read column names: {charbl.column_names}")
 
     values = ["Einstein", 100, False]
-    record = newtbl.createRecord(values)
+    record = charbl.createRecord(values)
     print(f"create single record")
     print_records([record])
 
@@ -687,37 +725,55 @@ if __name__ == "__main__":
         ["Rosenburg", 78, False],
         ["Neil dGrasse Tyson", 57, True],
     ]
-    records = newtbl.createRecords(values)
+    records = charbl.createRecords(values)
     print(f"create multiple records")
     print_records(records)
 
     columns = ["name", "age"]
-    records = newtbl.readRecords(columns=columns)
+    records = charbl.readRecords(columns=columns)
     print(f"read only name and age columns for all records")
     print_records(records)
 
     # columns = ["name", "age"]
-    # records = newtbl.readRecords(columns=columns)
+    # records = charbl.readRecords(columns=columns)
     # print(f"read only name and age columns for all records")
     # print_records(records)
 
     where = [["nobelprizewinner", [True]]]
-    records = newtbl.readRecords(where=where)
+    records = charbl.readRecords(where=where)
     print(f"read where")
     print_records(records)
 
     valuepairs = [["nobelprizewinner", False]]
     where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    records = newtbl.updateRecords(valuepairs=valuepairs, where=where)
+    records = charbl.updateRecords(valuepairs=valuepairs, where=where)
     print(f"update true to false")
     print_records(records)
 
     valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
     rowid = 5
-    record = newtbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
     print(f"update record 'id = 5'")
     print_records([record])
 
-    records = newtbl.readRecords()
+    records = charbl.readRecords()
     print(f"read all records")
     print_records(records)
+
+    reltbl = Table(
+        db = Database(path="", filename="science"),
+        name = "relationships",
+        column_names = ["charid1", "charid2", "description"],
+        column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    )
+
+    values = [1, 2, "hawking and edison"]
+    record = reltbl.createRecord(values)
+    print(f"create single record")
+    print_records([record])
+
+    records = reltbl.readRecords()
+    print(f"read all records")
+    print_records(records)
+
+    records = reltbl.readForeignValues('charid1')

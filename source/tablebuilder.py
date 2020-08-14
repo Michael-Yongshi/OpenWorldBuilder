@@ -59,7 +59,7 @@ def table_builder(filename):
         db = Database(filename=filename),
         name = "relationships",
         column_names = ["name", "character1_id", "character2_id", "type", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER", "VARCHAR(255)", "TEXT"],
+        column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "VARCHAR(255)", "TEXT"],
     ))
 
     # # Template
