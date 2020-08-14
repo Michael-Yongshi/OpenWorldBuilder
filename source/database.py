@@ -124,10 +124,10 @@ class Database(object):
         cursor = self.connection.cursor()
 
         try:
-            print(f"--------------------\n{query}\n")
+            # print(f"--------------------\n{query}\n")
             cursor.execute(query)
             self.connection.commit()
-            print("Success!\n--------------------")
+            # print("Success!\n--------------------")
 
             return cursor
 
@@ -138,11 +138,11 @@ class Database(object):
         cursor = self.connection.cursor()
 
         try:
-            print(f"--------------------query\n{query}\n")
-            print(f"--------------------parameters\n{parameters}\n")
+            # print(f"--------------------query\n{query}\n")
+            # print(f"--------------------parameters\n{parameters}\n")
             cursor.execute(query, parameters)
             self.connection.commit()
-            print("Success!\n--------------------")
+            # print("Success!\n--------------------")
 
             return cursor
 
@@ -188,7 +188,7 @@ class Database(object):
         parameters = tuple()
         
         # where can be collected as [[column name, [values]], [column name2, [values2]]]
-        print(f"where {where}")
+        # print(f"where {where}")
         if where == []:
             whereline = ""
 
@@ -204,8 +204,8 @@ class Database(object):
                 whereline += ', '.join('?' for _ in statement[1])
                 whereline += ') AND '
             whereline = whereline[:-5]
-            print(f"whereline {whereline}")
-        print(f"parameters = {parameters}")
+            # print(f"whereline {whereline}")
+        # print(f"parameters = {parameters}")
 
         query = f"SELECT {column_line} from {table} {whereline}"
 
@@ -231,31 +231,10 @@ class Database(object):
 
     def create_records(self, table, column_names = ["integer", "text"], valuepairs = [[1,'test'], [2, 'test']]):
         
-        print(f"create records database with table {table}, columns {column_names} and valuepairs {valuepairs}")
+        # print(f"create records database with table {table}, columns {column_names} and valuepairs {valuepairs}")
 
         # transform column names to a string
         column_text = ', '.join(column_names)
-
-        # transforms the valuepairs to string format
-        # valuepairs_text = ""
-        # for valuepair in valuepairs:
-
-        #     valuepair_text = ""
-        #     for value in valuepair:
-
-        #         if isinstance(value, str):
-        #             valuepair_text += f"'{value}', "
-        #         else:
-        #             valuepair_text += f"{value}, "
-        #         # print(f"i = {i} with {valuepair_text}")
-        #     valuepair_text = valuepair_text[:-2]
-        #     # print(f"valuepair text = {valuepair_text}")
-
-        #     valuepairs_text += f"({valuepair_text}),"
-        #     # print(valuepairs_text)
-
-        # valuepairs_text = valuepairs_text[:-1]
-        # # print(valuepairs_text)
 
         # create placeholders
         placeholders = ""
@@ -266,8 +245,8 @@ class Database(object):
             valuepair_placeholders = '(' + ','.join('?' for value in valuepair) + '),\n'
             placeholders += valuepair_placeholders
         placeholders = placeholders[:-2]
-        print(f"placeholders = {placeholders}")
-        print(f"parameters = {parameters}")
+        # print(f"placeholders = {placeholders}")
+        # print(f"parameters = {parameters}")
 
         query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
@@ -282,8 +261,8 @@ class Database(object):
             parameters += tuple([valuepair[1]])
             set_placeholders += valuepair[0] + ' = ?, '
         set_placeholders = set_placeholders[:-2]
-        print(f"set_placeholders = {set_placeholders}")
-        print(f"parameters = {parameters}")
+        # print(f"set_placeholders = {set_placeholders}")
+        # print(f"parameters = {parameters}")
 
         # create where_placeholders
         where_placeholders = ""
@@ -291,8 +270,8 @@ class Database(object):
             parameters += tuple(statement[1])
             where_placeholders += statement[0] + ' = ? AND '
         where_placeholders = where_placeholders[:-5]
-        print(f"where_placeholders = {where_placeholders}")
-        print(f"parameters = {parameters}")
+        # print(f"where_placeholders = {where_placeholders}")
+        # print(f"parameters = {parameters}")
 
         query = f"UPDATE {table} SET\n{set_placeholders}\nWHERE\n{where_placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
@@ -372,10 +351,10 @@ class Table(object):
             for value in record.values:
                 values += [value]
 
-            print(f"values {values}")
+            # print(f"values {values}")
             tablevalues += [values]
 
-        print(f"tablevalues {tablevalues}")
+        # print(f"tablevalues {tablevalues}")
         self.createRecords(tablevalues)
 
     def set_defaults(self, defaults):
@@ -399,7 +378,7 @@ class Table(object):
 
                 self.defaults += default
 
-            print(f"defaults set are {self.defaults}")
+            # print(f"defaults set are {self.defaults}")
         
     def set_column_placement(self, column_placement):
 
@@ -414,7 +393,7 @@ class Table(object):
                 indexconfig = [index,0,1,1]
                 self.column_placement += [indexconfig]
 
-            print(f"column_placement set are {self.column_placement}")
+            # print(f"column_placement set are {self.column_placement}")
 
     def readColumnCount(self, includepk=True):
         """including private key column"""
@@ -458,7 +437,7 @@ class Table(object):
                     if isinstance(statement[0], int):
                         statement[0] = self.column_names[statement[0]]
 
-        print(f"where = {where}")
+        # print(f"where = {where}")
 
         sqlrecords = self.db.read_records(table=self.name, columns=columns, where=where)
 
@@ -489,7 +468,7 @@ class Table(object):
         for index, column_name in enumerate(column_names):
             columns.append(f"{column_name} {column_types[index]}")
 
-        print(f"query create table {columns}")
+        # print(f"query create table {columns}")
         self.db.create_table(table=self.name, variables=columns)
 
     def createRecord(self, values):
@@ -512,7 +491,7 @@ class Table(object):
         where = [["id",[newrows_last]]]
 
         sqlrecords = self.db.read_records(table=self.name, where=where)
-        print(f"sqlrecords = {sqlrecords}")
+        # print(f"sqlrecords = {sqlrecords}")
         recordobject = Record(self, sqlrecords[0])
 
         return recordobject
@@ -537,7 +516,7 @@ class Table(object):
             newrows_last = self.db.get_max_row(self.name)
 
             wherevalues = list(range(newrows_first, newrows_last + 1))
-            print(f"wherevalues = {wherevalues}")
+            # print(f"wherevalues = {wherevalues}")
             where = [["id",wherevalues]]
 
             records = self.db.read_records(table=self.name, where=where)
@@ -566,14 +545,14 @@ class Table(object):
         # print(f"record after = {record_after}")
 
         if record_before.primarykey != record_after.primarykey:
-            print(f"Update messed up the table!!!")
+            # print(f"Update messed up the table!!!")
             return
 
         record_object = record_after
         if record_before.values != record_after.values:
-            print(f"updated record {record_object.recordarray}")
+            # print(f"updated record {record_object.recordarray}")
         else:
-            print(f"update record was not necessary")
+            # print(f"update record was not necessary")
 
         return record_object
 
@@ -596,7 +575,7 @@ class Table(object):
                     if isinstance(statement[0], int):
                         statement[0] = self.column_names[statement[0]]
 
-        print(f"where {where}, valuepairs {valuepairs}")
+        # print(f"where {where}, valuepairs {valuepairs}")
         self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
                     
         table_after = self.readRecords()
@@ -605,12 +584,12 @@ class Table(object):
         record_objects = []
         for index, record in enumerate(table_after):
             if table_before[index].primarykey != record.primarykey:
-                print(f"Update messed up the table!!!")
+                # print(f"Update messed up the table!!!")
                 return
             if table_before[index].values != record.values:
                 record_objects += [table_after[index]]
                 for row in record_objects:
-                    print(f"updated row {row.recordarray}")
+                    # print(f"updated row {row.recordarray}")
                 return record_objects
 
     # def transform_boolean(self, value):
@@ -661,14 +640,14 @@ class Record(object):
         for index, name in enumerate(self.table.column_names):
             recordpair = [name, self.recordarray[index]]
             self.recordpairs += [recordpair]
-        print(f"set recordpairs {self.recordpairs}")
+        # print(f"set recordpairs {self.recordpairs}")
 
     def setvaluepairs(self):
         self.valuepairs = []
         for index, name in enumerate(self.table.column_names[1:]):
             valuepair = [name, self.recordarray[1:][index]]
             self.valuepairs += [valuepair]
-        print(f"set valuepairs {self.valuepairs}")
+        # print(f"set valuepairs {self.valuepairs}")
 
 
 def print_records(records):
