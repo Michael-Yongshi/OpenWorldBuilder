@@ -138,8 +138,8 @@ class Database(object):
         cursor = self.connection.cursor()
 
         try:
-            # print(f"--------------------query\n{query}\n")
-            # print(f"--------------------parameters\n{parameters}\n")
+            print(f"--------------------query\n{query}\n")
+            print(f"--------------------parameters\n{parameters}\n")
             cursor.execute(query, parameters)
             self.connection.commit()
             # print("Success!\n--------------------")
