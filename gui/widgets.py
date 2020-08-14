@@ -5,6 +5,7 @@ from PyQt5.QtCore import (
     pyqtSignal,
     QDate,
     QDateTime,
+    QVariant,
     )
 
 from PyQt5.QtWidgets import (
@@ -48,7 +49,7 @@ from source.database import (
     Record,
 )
 
-class RecordLayout(QGridLayout):
+class RecordLayout(QHBoxLayout):
     def __init__(self, record):
         super().__init__()
 
@@ -63,19 +64,53 @@ class RecordLayout(QGridLayout):
 
     def build_layout(self):
 
+        self.build_detailbox()
+        self.build_linkedbox()
+
+    def build_linkedbox(self):
+
+        linkedbox = QVBoxLayout()
+
         table = self.record.table
         # print(f"table = {table}")
+
+        recordarray = self.record.recordarray
+        # print(f"recordarray = {recordarray}")
+
+        # for index, columntype in enumerate(table.column_types):
+
+        #     # set title for widget
+        #     widget_title = QLabel()
+        #     widget_title.setText(table.column_names[index])
+
+        # # add widget and title to the layout
+        # linkedbox.addWidget(widget_title)
+        # linkedbox.addWidget(widget_value)
+        
+        # finish linked window
+        linkedframe = QFrame()
+        linkedframe.setLayout(linkedbox)
+        self.addWidget(linkedframe, 2)
+
+    def build_detailbox(self):
+
+        detailbox = QGridLayout()
+        table = self.record.table
+        # print(f"table = {table}")
+
         recordarray = self.record.recordarray
         # print(f"recordarray = {recordarray}")
 
         for index, columntype in enumerate(table.column_types):
 
-        # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
-            fkfound = False
+            # set title for widget
+            widget_title = QLabel()
+            widget_title.setText(table.column_names[index])
 
+            # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
+            fkfound = False
             split = columntype.split(' ', 3)
             # print(f"split {split}")
-
             if len(split) == 3:
                 cname = self.record.table.column_names[index]
                 creferences = split[1]
@@ -87,24 +122,29 @@ class RecordLayout(QGridLayout):
                     widget_value = QComboBox()
                     foreign_valuepairs = self.record.table.readForeignValues(column=cname)
 
-                    for indexvp, valuepair in enumerate(foreign_valuepairs):
+                    zero_valuepair = [0, f"No {table.column_names[index]}"]
+                    valuepairs = [zero_valuepair] + foreign_valuepairs
+                    print(f"valuepairs including no choice {valuepairs}")
+
+                    for indexvp, valuepair in enumerate(valuepairs):
                         print(f"indexvp {indexvp}, valuepair {valuepair}")
                         foreign_id = valuepair[0]
                         foreign_name = valuepair[1]
                         widget_value.addItem(foreign_name, foreign_id)
+                        widget_tooltip = f"tooltip {foreign_name}"
+                        widget_value.setItemData(indexvp, widget_tooltip, Qt.ToolTipRole)
                         print(f"added {foreign_name} with {foreign_id}")
 
                         if recordarray[index] == foreign_id:
+                            # setting the default value and the tooltip for the combobox itself
                             print(f"record shows value {recordarray[index]}")
                             widget_value.setCurrentIndex(indexvp)
+                            widget_value.setToolTip(widget_tooltip)
 
-            # print(f"fkfound {fkfound}")
-
-            # no foreign key when in except, so create the appropriate widget to display the value
+            # if fkfound is true then it was a foreign key and the widget is already made
             if fkfound == False:
                 ctype = columntype.split(' ', 1)[0].upper()
                 # print(f"ctype = {ctype}")
-
 
                 if ctype == "INTEGER":
                     widget_value = QSpinBox()
@@ -150,24 +190,24 @@ class RecordLayout(QGridLayout):
                         widget_value = QLineEdit()
                         widget_value.setText("Error setting widget")
 
-            # set title for widget
-            widget_title = QLabel()
-            widget_title.setText(table.column_names[index])
-
             # print(f"column placements are {table.column_placement}")
             # print(f"column placements[index] are {table.column_placement[index]}")
-
             row = table.column_placement[index][0]
             column = table.column_placement[index][1] + 1
             heigth = table.column_placement[index][2]
             width = table.column_placement[index][3]
 
             # add widget and title to the layout
-            self.addWidget(widget_value, row, column, heigth, width)
-            self.addWidget(widget_title, row, 0, heigth, 1)
+            detailbox.addWidget(widget_value, row, column, heigth, width)
+            detailbox.addWidget(widget_title, row, 0, heigth, 1)
 
             # add the value widget to the list of widgets for easy access of values
             self.widgets.append(widget_value)
+
+        # finish detail window
+        detailframe = QFrame()
+        detailframe.setLayout(detailbox)
+        self.addWidget(detailframe, 8)
 
     def processValues(self):
         """

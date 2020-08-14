@@ -19,7 +19,7 @@ def table_builder(filename):
             [1,0,1,1],
             [2,0,1,1],
             [3,0,10,1],
-        ]
+        ],
     ))
 
     # Events
@@ -52,15 +52,33 @@ def table_builder(filename):
         db = Database(filename=filename),
         name = "characters",
         column_names = ["name", "age", "gender", "nationality", "race", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER", "VARCHAR(255)", "VARCHAR(255)", "VARCHAR(255)", "TEXT"],
+        column_types = ["VARCHAR(255)", "INTEGER", "VARCHAR(255)", "VARCHAR(255)", "INTEGER REFERENCES races(id)", "TEXT"],
     ))
 
+    # Races
     tables.append(Table(
         db = Database(filename=filename),
-        name = "relationships",
-        column_names = ["name", "character1_id", "character2_id", "type", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "VARCHAR(255)", "TEXT"],
+        name = "races",
+        column_names = ["name", "description"],
+        column_types = ["VARCHAR(255)", "TEXT"],
     ))
+
+    # tables.append(Table(
+    #     db = Database(filename=filename),
+    #     name = "relationships",
+    #     column_names = ["name", "character1_id", "character2_id", "type", "description"],
+    #     column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "VARCHAR(255)", "TEXT"],
+    # ))
+    
+    # Many-to-many tables
+    # tables.append(Table(
+    #     db = Database(filename=filename),
+    #     name = "link_stories_characters",
+    #     column_names = ["story_id", "character_id"],
+    #     column_types = ["INTEGER REFERENCES stories(id)", "INTEGER REFERENCES characters(id)"],
+    # ))
+
+
 
     # # Template
     # tables.append(Table(
