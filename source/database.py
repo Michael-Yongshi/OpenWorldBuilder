@@ -142,7 +142,7 @@ class Database(object):
             print(f"--------------------parameters\n{parameters}\n")
             cursor.execute(query, parameters)
             self.connection.commit()
-            # print("Success!\n--------------------")
+            print("Success!\n--------------------")
 
             return cursor
 
@@ -213,7 +213,6 @@ class Database(object):
         records = self.get_records_array(cursor.fetchall())
 
         return records
-
 
     def create_table(self, table, variables = ["integer INTEGER","text TEXT"]):
         """
