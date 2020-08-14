@@ -40,6 +40,7 @@ from PyQt5.QtGui import (
     )
     
 from guidarktheme.widget_template import *
+from guidarktheme.decorators import Decorators
 
 from gui.widgets import (
     RecordLayout,
@@ -114,12 +115,12 @@ class WorldOverview(QMainWindow):
                 "tooltip": "Open existing world",
                 "connect": self.open_database
             },
-            {
-                "name": "Save",
-                "shortcut": "Ctrl+S",
-                "tooltip": "Save current world",
-                "connect": self.save_database
-            },
+            # {
+            #     "name": "Save",
+            #     "shortcut": "Ctrl+S",
+            #     "tooltip": "Save current world",
+            #     "connect": self.save_database
+            # },
             {
                 "name": "SaveAs",
                 "shortcut": "",
@@ -236,22 +237,38 @@ class WorldOverview(QMainWindow):
         pagebox.addWidget(record_frame, 15)
 
         # adding a new, create or edit button
-        btn = QPushButton()
+        buttonbox = QHBoxLayout()
         
         if self.table_selected != None:
             if self.record_selected == None:
-                btn.setText("New Record")
-                btn.clicked.connect(self.closure_set_new_record_selection(self.table_selected))
+                newbtn = QPushButton()
+                newbtn.setText("New Record")
+                newbtn.clicked.connect(self.closure_set_new_record_selection(self.table_selected))
+                buttonbox.addWidget(newbtn, 1)
 
             elif self.record_selected != None:
                 if self.record_selected.primarykey == -1:
-                    btn.setText("Confirm Creation")
-                    btn.clicked.connect(self.create_record)
-                else:
-                    btn.setText("Confirm Update")
-                    btn.clicked.connect(self.update_record)
+                    createbtn = QPushButton()
+                    createbtn.setText("Confirm Creation")
+                    createbtn.setShortcut("Ctrl+S")
+                    createbtn.clicked.connect(self.create_record)
+                    buttonbox.addWidget(createbtn, 1)
 
-            pagebox.addWidget(btn, 1)
+                else:
+                    updatebtn = QPushButton()
+                    updatebtn.setText("Confirm Update")
+                    updatebtn.setShortcut("Ctrl+S")
+                    updatebtn.clicked.connect(self.update_record)
+                    buttonbox.addWidget(updatebtn, 1)
+
+                    delbtn = QPushButton()
+                    delbtn.setText("Delete")
+                    delbtn.clicked.connect(self.delete_record)
+                    buttonbox.addWidget(delbtn, 1)
+        
+        buttonframe = QRaisedFrame()
+        buttonframe.setLayout(buttonbox)
+        pagebox.addWidget(buttonframe, 1)
 
         pageboxframe = QRaisedFrame()
         pageboxframe.setLayout(pagebox)
@@ -373,6 +390,7 @@ class WorldOverview(QMainWindow):
 
         return set_new_record_selection
 
+    # @Decorators.loading_cursor
     def create_record(self):
 
         # get a Record object for the new record
@@ -387,6 +405,7 @@ class WorldOverview(QMainWindow):
 
         self.initUI()
 
+    # @Decorators.loading_cursor
     def update_record(self):
 
         # get a Record object for the new record
@@ -397,6 +416,10 @@ class WorldOverview(QMainWindow):
 
         self.set_record_selection(record)
         self.initUI()
+
+    def delete_record(self):
+
+        pass
 
 def run():
     global app
