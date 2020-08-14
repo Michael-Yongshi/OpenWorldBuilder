@@ -58,8 +58,8 @@ def table_builder(filename):
     tables.append(Table(
         db = Database(filename=filename),
         name = "relationships",
-        column_names = ["character1_id", "character2_id", "type", "description"],
-        column_types = ["INTEGER", "INTEGER", "VARCHAR(255)", "TEXT"],
+        column_names = ["name", "character1_id", "character2_id", "type", "description"],
+        column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER", "VARCHAR(255)", "TEXT"],
     ))
 
     # # Template

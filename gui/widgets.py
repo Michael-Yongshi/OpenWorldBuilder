@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QAction,
     QApplication,
     QCheckBox,
+    QComboBox,
     QDateEdit,
     QDateTimeEdit,
     QDialog,
@@ -69,53 +70,85 @@ class RecordLayout(QGridLayout):
 
         for index, columntype in enumerate(table.column_types):
 
-            ctype = columntype.split(' ', 1)[0].upper()
-            # print(f"ctype = {ctype}")
+        # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
+            fkfound = False
 
-            # create the appropriate widget to display the value
-            if ctype == "BOOL":
-                widget_value = QCheckBox()
-                widget_value.setChecked(recordarray[index])                            
+            split = columntype.split(' ', 3)
+            # print(f"split {split}")
 
-            elif ctype == "INTEGER":
-                widget_value = QSpinBox()
-                widget_value.setMinimum(-1)
-                widget_value.setValue(recordarray[index])
+            if len(split) == 3:
+                cname = self.record.table.column_names[index]
+                creferences = split[1]
+                cforeign = split[2]
+                
+                if creferences.upper() == "REFERENCES":
+                    fkfound = True
 
-            elif ctype == "VARCHAR(255)":
-                widget_value = QLineEdit()
-                widget_value.setText(recordarray[index])
-            
-            elif ctype == "TEXT":
-                widget_value = QTextEdit()
-                widget_value.adjustSize()
-                widget_value.insertPlainText(recordarray[index])
-                # widget_value.insertHtml(recordarray[index])
+                    widget_value = QComboBox()
+                    foreign_valuepairs = self.getForeignValues(column_name=[cname])
 
-            # elif ctype == "DATE":
-            #     widget_value = QDateEdit()
-            #     date = QDate()
-            #     sqldate = recordarray[index]
-            #     datestring = datetime.date()
-            #     date.fromString(recordarray[index], 'yyyy-MM-dd')
-            #     widget_value.setDate(date)
+                    for indexvp, valuepair in enumerate(foreign_valuepairs):
+                        print(f"indexvp {indexvp}, valuepair {valuepair}")
+                        foreign_id = valuepair[0]
+                        foreign_name = valuepair[1]
+                        widget_value.addItem(foreign_name, foreign_id)
+                        print(f"added {foreign_name} with {foreign_id}")
 
-            # elif ctype == "DATETIME" or ctype == "TIMESTAMP":
-            #     widget_value = QDateTimeEdit()
-            #     date = QDateTime()
-            #     sqldate = recordarray[index]
-            #     datestring = datetime.datetime()
-            #     date.fromString(recordarray[index], 'yyyy-MM-dd')
-            #     widget_value.setDate(date)
+                        if recordarray[index] == foreign_id:
+                            print(f"record shows value {recordarray[index]}")
+                            widget_value.setCurrentIndex(indexvp)
 
-            else:
-                try:
-                    # assumed text
+            # print(f"fkfound {fkfound}")
+
+            # no foreign key when in except, so create the appropriate widget to display the value
+            if fkfound == False:
+                ctype = columntype.split(' ', 1)[0].upper()
+                # print(f"ctype = {ctype}")
+
+
+                if ctype == "INTEGER":
+                    widget_value = QSpinBox()
+                    widget_value.setMinimum(-1)
+                    widget_value.setValue(recordarray[index])
+
+                elif ctype == "BOOL":
+                    widget_value = QCheckBox()
+                    widget_value.setChecked(recordarray[index])                            
+
+                elif ctype == "VARCHAR(255)":
                     widget_value = QLineEdit()
                     widget_value.setText(recordarray[index])
-                except:
-                    widget_value = QLineEdit()
-                    widget_value.setText("Error setting widget")
+                
+                elif ctype == "TEXT":
+                    widget_value = QTextEdit()
+                    widget_value.adjustSize()
+                    widget_value.insertPlainText(recordarray[index])
+                    # widget_value.insertHtml(recordarray[index])
+
+                # elif ctype == "DATE":
+                #     widget_value = QDateEdit()
+                #     date = QDate()
+                #     sqldate = recordarray[index]
+                #     datestring = datetime.date()
+                #     date.fromString(recordarray[index], 'yyyy-MM-dd')
+                #     widget_value.setDate(date)
+
+                # elif ctype == "DATETIME" or ctype == "TIMESTAMP":
+                #     widget_value = QDateTimeEdit()
+                #     date = QDateTime()
+                #     sqldate = recordarray[index]
+                #     datestring = datetime.datetime()
+                #     date.fromString(recordarray[index], 'yyyy-MM-dd')
+                #     widget_value.setDate(date)
+
+                else:
+                    try:
+                        # assumed text
+                        widget_value = QLineEdit()
+                        widget_value.setText(recordarray[index])
+                    except:
+                        widget_value = QLineEdit()
+                        widget_value.setText("Error setting widget")
 
             # set title for widget
             widget_title = QLabel()
@@ -136,6 +169,19 @@ class RecordLayout(QGridLayout):
             # add the value widget to the list of widgets for easy access of values
             self.widgets.append(widget_value)
 
+    def getForeignValues(self, column_name):
+
+        foreign_valuepairs = []
+        maxrow = 4
+        # print(f"maxrow {maxrow}")
+        for c in range(1, maxrow):
+            valuepair = [c, f"name {c}"]
+            foreign_valuepairs += [valuepair]
+
+        # print(f"foreign values {foreign_valuepairs}")
+        return foreign_valuepairs
+        # self.record.table.readForeignValues(column_name)
+
     def processValues(self):
         """
         Returns a Record object, 
@@ -146,21 +192,41 @@ class RecordLayout(QGridLayout):
 
         recordarray = []
         for index, columntype in enumerate(table.column_types):
-            ctype = columntype.split(' ', 1)[0].upper()
-            # print(f"ctype = {ctype}")
 
-            if ctype == "VARCHAR(255)":
-                string = self.processText(widgets[index].text())
-                recordarray.append(string)
-            elif ctype == "TEXT":
-                string = self.processText(widgets[index].toPlainText())
-                recordarray.append(string)
-            elif ctype == "INTEGER":
-                recordarray.append(widgets[index].value())
-            elif ctype == "DATE":
-                recordarray.append(widgets[index].value())
-            elif ctype == "BOOL":
-                recordarray.append(widgets[index].isChecked())
+            # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
+            fkfound = False
+
+            split = columntype.split(' ', 3)
+            # print(f"split {split}")
+
+            if len(split) == 3:
+                cname = self.record.table.column_names[index]
+                creferences = split[1]
+                cforeign = split[2]
+                
+                if creferences.upper() == "REFERENCES":
+                    fkfound = True
+                    currentindex = widgets[index].currentIndex()
+                    currentid = widgets[index].itemData(currentindex)
+                    print(f"itemindex {currentindex} and itemdata {currentid}")
+                    recordarray.append(currentid)
+
+            if fkfound == False:
+                ctype = columntype.split(' ', 1)[0].upper()
+                # print(f"ctype = {ctype}")
+
+                if ctype == "VARCHAR(255)":
+                    string = self.processText(widgets[index].text())
+                    recordarray.append(string)
+                elif ctype == "TEXT":
+                    string = self.processText(widgets[index].toPlainText())
+                    recordarray.append(string)
+                elif ctype == "INTEGER":
+                    recordarray.append(widgets[index].value())
+                elif ctype == "DATE":
+                    recordarray.append(widgets[index].value())
+                elif ctype == "BOOL":
+                    recordarray.append(widgets[index].isChecked())
 
             # print(f"recordarray building {recordarray}")
         # print(f"recordarray processed {recordarray}")
