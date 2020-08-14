@@ -149,7 +149,73 @@ class Database(object):
         except Error as e:
             print(f"The error '{e}' occurred")
 
-    def create_table(self, table = "test", variables = ["integer INTEGER","text TEXT"]):
+    def read_table_names(self):
+
+        query = f"SELECT name FROM sqlite_master WHERE type='table';"
+        
+        cursor = self.execute_query(query=query)
+        tables = cursor.fetchall()
+        # print(tables)
+        # for table in tables:
+            # print(table)
+
+        return tables
+
+    def read_column_names(self, table = "test"):
+
+        query = f"SELECT * FROM {table};"
+        
+        cursor = self.execute_query(query=query)
+        description = cursor.description
+
+        # print(description)
+        columns = []
+        for record in description:
+            # print(record[0])
+            columns += [record[0]]
+        
+        # print(columns)
+        return columns
+
+    def read_records(self, table, columns=[], where = []):
+
+        if columns == []:
+            column_line = "*"
+
+        else:
+            column_line = ', '.join(columns)
+        
+        parameters = tuple()
+        
+        # where can be collected as [[column name, [values]], [column name2, [values2]]]
+        print(f"where {where}")
+        if where == []:
+            whereline = ""
+
+        else:
+            whereline = "WHERE "
+            for statement in where:
+                parameters += tuple(statement[1])
+                # print(f"statement {statement}")
+                # print(f"statement0 {statement[0]}")
+                # print(f"statement1 {statement[1]}")
+                whereline += f"{statement[0]}"
+                whereline += " IN ("
+                whereline += ', '.join('?' for _ in statement[1])
+                whereline += ') AND '
+            whereline = whereline[:-5]
+            print(f"whereline {whereline}")
+        print(f"parameters = {parameters}")
+
+        query = f"SELECT {column_line} from {table} {whereline}"
+
+        cursor = self.execute_parameterised_query(query, parameters)
+        records = self.get_records_array(cursor.fetchall())
+
+        return records
+
+
+    def create_table(self, table, variables = ["integer INTEGER","text TEXT"]):
         """
         collects input of table name and column information
         builds a single query and 
@@ -163,7 +229,7 @@ class Database(object):
         query = f"CREATE TABLE IF NOT EXISTS {table} (\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);"
         self.execute_query(query)
 
-    def create_records(self, table = "test", column_names = ["integer", "text"], valuepairs = [[1,'test'], [2, 'test']]):
+    def create_records(self, table, column_names = ["integer", "text"], valuepairs = [[1,'test'], [2, 'test']]):
         
         print(f"create records database with table {table}, columns {column_names} and valuepairs {valuepairs}")
 
@@ -206,82 +272,29 @@ class Database(object):
         query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
 
-    def read_table_names(self):
+    def update_records(self, table, valuepairs = [["integer", 3], ["text",'test']], where=[["integer", 5]]):
 
-        query = f"SELECT name FROM sqlite_master WHERE type='table';"
-        
-        cursor = self.execute_query(query=query)
-        tables = cursor.fetchall()
-        # print(tables)
-        # for table in tables:
-            # print(table)
+        parameters = tuple()
 
-        return tables
-
-    def read_column_names(self, table = "test"):
-
-        query = f"SELECT * FROM {table};"
-        
-        cursor = self.execute_query(query=query)
-        description = cursor.description
-
-        # print(description)
-        columns = []
-        for record in description:
-            # print(record[0])
-            columns += [record[0]]
-        
-        # print(columns)
-        return columns
-
-    def read_records(self, table = "test", columns="*", where = ""):
-
-        select_records = f"SELECT {columns} from {table}"
-        if where != "":
-            select_records += f" WHERE {where}"
-
-        cursor = self.execute_query(select_records)    
-        records = self.get_records_array(cursor.fetchall())
-
-        return records
-
-    def update_records(self, table = "test", valuepairs = [["integer", 3], ["text",'test']], where=""):
-
-        # setvaluepairs = ""
-        # for valuearray in valuepairs:
-        #     if isinstance(valuearray[1], str):
-        #         setvaluepairs += f"{valuearray[0]} = '{valuearray[1]}',\n"
-        #     else:
-        #         setvaluepairs += f"{valuearray[0]} = {valuearray[1]},\n"
-            
-        # setvaluepairs = setvaluepairs[:-2]
-        # print(f"setvaluepairs {setvaluepairs}")
-
-        # create placeholders
-        placeholders = ""
-        parameters = ()
-        for record in valuepairs:
-            record_parameters = tuple(record)
-            parameters += record_parameters
-            record_placeholders = '(' + ' = '.join('?' for value in record) + '),\n'
-            placeholders += record_placeholders
-        placeholders = placeholders[:-2]
-        print(f"placeholders = {placeholders}")
+        # create set_placeholders
+        set_placeholders = ""
+        for valuepair in valuepairs:
+            parameters += tuple([valuepair[1]])
+            set_placeholders += valuepair[0] + ' = ?, '
+        set_placeholders = set_placeholders[:-2]
+        print(f"set_placeholders = {set_placeholders}")
         print(f"parameters = {parameters}")
 
-        inpart = ""
-        for s in where[1]:
+        # create where_placeholders
+        where_placeholders = ""
+        for statement in where:
+            parameters += tuple(statement[1])
+            where_placeholders += statement[0] + ' = ? AND '
+        where_placeholders = where_placeholders[:-5]
+        print(f"where_placeholders = {where_placeholders}")
+        print(f"parameters = {parameters}")
 
-            if isinstance(s, str):
-                inpart += f"'{s}', "
-            else:
-                inpart += f"{s}, "
-
-        inpart = inpart[:-2]
-        where = f"{where[0]} IN ({inpart})"
-        # print(f"where = {where}")
-
-        query = f"UPDATE {table} SET\n{placeholders}\nWHERE\n{where}\n;"
+        query = f"UPDATE {table} SET\n{set_placeholders}\nWHERE\n{where_placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
 
     def get_records_array(self, sqlrecords):
@@ -304,6 +317,13 @@ class Database(object):
         lastrow = cursor.fetchall()[0][0]
 
         return lastrow
+
+    def transform_boolean(self, value):
+        if value == True:
+            value = 1
+        elif value == False:
+            value = 0
+        return value
 
 class Table(object):
     def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = [], column_placement = []):
@@ -408,37 +428,43 @@ class Table(object):
         
         return self.db.get_max_row(table=self.name)
 
-    def readRecords(self, columns=-1, select=[]):
+    def readRecords(self, columns=[], where=[]):
 
-        if columns != -1:
-            column_selection = "id, "
-            for c in columns:
-                column_selection += f"{self.column_names[c]}, "
-            column_selection = column_selection[:-2]
-        else:
-            column_selection = "*"
-        # print(f"columns = {column_selection}")
+        columns = self.column_names
+        #if columns is not given, set columns to all columns of the table
+        # if columns == []:
+        #     columns = self.column_names
 
-        # print(f"select {select}")
-        if select != []:
-            inpart = ""
-            for s in select[1]:
-                s = self.transform_boolean(s)
+        # # if strings are given, add the primary key column in front
+        # elif isinstance(columns[0], str):
+        #     columns = ["id"] + columns
 
-                if isinstance(s, str):
-                    inpart += f"'{s}', "
-                else:
-                    inpart += f"{s}, "
-            inpart = inpart[:-2]
-            where = f"{select[0]} IN ({inpart})"
-        else:
-            where = ""
-        # print(f"where = {where}")
+        # # if numbers are given, add the primary column in front and convert to column names
+        # else:
+        #     column_numbers = [0] + columns
+        #     columns = []
+        #     for column_number in column_numbers:
+        #         columns += self.column_names[column_number]
 
-        read_records = self.db.read_records(table=self.name, columns=column_selection, where=where)
+        # print(f"columns {columns}")
+
+        # only do something with where if its given
+        if where != []:
+            if isinstance(where, int):
+                where = [["id", [where]]]
+            else:
+                for statement in where:
+                    # if column is a number, get the column name
+                    if isinstance(statement[0], int):
+                        statement[0] = self.column_names[statement[0]]
+
+        print(f"where = {where}")
+
+        sqlrecords = self.db.read_records(table=self.name, columns=columns, where=where)
+
         records = []
-        # print(read_records)
-        for record in read_records:
+        # print(sqlrecords)
+        for record in sqlrecords:
             valuearray = []
             for value in record:
                 valuearray += [value]
@@ -475,16 +501,17 @@ class Table(object):
         It returns the last row as a Record object
         """
 
-        # print(f"values {values}")
-        for index, value in enumerate(values):
-            values[index] = self.transform_boolean(value)
+        # # print(f"values {values}")
+        # for index, value in enumerate(values):
+        #     values[index] = self.transform_boolean(value)
         valuepairs = [values]
 
         self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=valuepairs)
 
         newrows_last = self.db.get_max_row(self.name)
+        where = [["id",[newrows_last]]]
 
-        sqlrecords = self.db.read_records(table=self.name, where=f"id = {newrows_last}")
+        sqlrecords = self.db.read_records(table=self.name, where=where)
         print(f"sqlrecords = {sqlrecords}")
         recordobject = Record(self, sqlrecords[0])
 
@@ -499,23 +526,21 @@ class Table(object):
         else:
             newrows_first = self.db.get_max_row(self.name) + 1
 
-            # print(f"table createRecords before transform {records}")
-            for rindex, record in enumerate(records):
-                for vindex, value in enumerate(record):
-                    records[rindex][vindex] = self.transform_boolean(value)
-            # print(records)
+            # # print(f"table createRecords before transform {records}")
+            # for rindex, record in enumerate(records):
+            #     for vindex, value in enumerate(record):
+            #         records[rindex][vindex] = self.transform_boolean(value)
+            # # print(records)
             # print(f"table createRecords records {records}")
             self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=records)
 
             newrows_last = self.db.get_max_row(self.name)
-            whererange = range(newrows_first, newrows_last + 1)
-            # print(f"create range = {whererange}")
 
-            wherestring = ""
-            for row in whererange:
-                wherestring += f"{row}, "
-            wherestring = wherestring[:-2]
-            records = self.db.read_records(table=self.name, where=f"id IN ({wherestring})")
+            wherevalues = list(range(newrows_first, newrows_last + 1))
+            print(f"wherevalues = {wherevalues}")
+            where = [["id",wherevalues]]
+
+            records = self.db.read_records(table=self.name, where=where)
 
             recordobjects = []
             for record in records:
@@ -525,19 +550,19 @@ class Table(object):
 
     def updateRecordbyID(self, rowid, valuepairs):
 
-        # get a selectstatement from just the rowid
-        select = ["id", [rowid]]
+        # get a wherestatement from just the rowid
+        where = [["id",[rowid]]]
 
         # get record before updating
-        record_before = self.readRecords(select=select)[0]
+        record_before = self.readRecords(where=where)[0]
         # print(f"record before = {record_before}")
 
         # update the record
         # print(valuepairs)
-        self.db.update_records(table=self.name, valuepairs=valuepairs, where=select)
+        self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
 
         # get record after updating
-        record_after = self.readRecords(select=select)[0]
+        record_after = self.readRecords(where=where)[0]
         # print(f"record after = {record_after}")
 
         if record_before.primarykey != record_after.primarykey:
@@ -552,25 +577,27 @@ class Table(object):
 
         return record_object
 
-    def updateRecords(self, valuepairs, select):
+    def updateRecords(self, valuepairs, where):
 
         table_before = self.readRecords()
         # print(f"table before = {table_before}")
 
-        # print(f"valueparis = {valuepairs}")
-        for valuearray in valuepairs:
-            valuearray[1] = self.transform_boolean(valuearray[1])
-        # print(f"valuepairs = {valuepairs}")
+        # # print(f"valueparis = {valuepairs}")
+        # for valuearray in valuepairs:
+        #     valuearray[1] = self.transform_boolean(valuearray[1])
+        # # print(f"valuepairs = {valuepairs}")
 
-        if isinstance(select, int):
-            select = ["id", [select]]
-        
-        # print(f"select {select}")
-        for v in range(len(select[1])):
-            select[1][v] = self.transform_boolean(select[1][v])
-        # print(f"select {select}")
+        if isinstance(where, int):
+            where = [["id", [where]]]
+        else:
+            if where != []:
+                for statement in where:
+                    # if column is a number, get the column name
+                    if isinstance(statement[0], int):
+                        statement[0] = self.column_names[statement[0]]
 
-        self.db.update_records(table=self.name, valuepairs=valuepairs, where=select)
+        print(f"where {where}, valuepairs {valuepairs}")
+        self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
                     
         table_after = self.readRecords()
         # print(f"table after = {table_after}")
@@ -586,12 +613,12 @@ class Table(object):
                     print(f"updated row {row.recordarray}")
                 return record_objects
 
-    def transform_boolean(self, value):
-        if value == True:
-            value = 1
-        elif value == False:
-            value = 0
-        return value
+    # def transform_boolean(self, value):
+    #     if value == True:
+    #         value = 1
+    #     elif value == False:
+    #         value = 0
+    #     return value
 
 class Record(object):
     def __init__(self, table, recordarray):
@@ -691,23 +718,33 @@ if __name__ == "__main__":
     print(f"create multiple records")
     print_records(records)
 
-    records = newtbl.readRecords()
-    print(f"read all records")
+    columns = ["name", "age"]
+    records = newtbl.readRecords(columns=columns)
+    print(f"read only name and age columns for all records")
     print_records(records)
 
-    selection = ["nobelprizewinner", [True]]
-    records = newtbl.readRecords(select=selection)
-    print(f"read selection")
+    # columns = ["name", "age"]
+    # records = newtbl.readRecords(columns=columns)
+    # print(f"read only name and age columns for all records")
+    # print_records(records)
+
+    where = [["nobelprizewinner", [True]]]
+    records = newtbl.readRecords(where=where)
+    print(f"read where")
     print_records(records)
 
     valuepairs = [["nobelprizewinner", False]]
-    selection = ["nobelprizewinner", [True]]
-    records = newtbl.updateRecords(valuepairs=valuepairs, select=selection)
+    where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
+    records = newtbl.updateRecords(valuepairs=valuepairs, where=where)
     print(f"update true to false")
     print_records(records)
 
     valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
-    rowid = 4
+    rowid = 5
     record = newtbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
-    print(f"update record 'id = 4'")
+    print(f"update record 'id = 5'")
     print_records([record])
+
+    records = newtbl.readRecords()
+    print(f"read all records")
+    print_records(records)
