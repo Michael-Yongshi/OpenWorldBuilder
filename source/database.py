@@ -549,10 +549,10 @@ class Table(object):
             return
 
         record_object = record_after
-        if record_before.values != record_after.values:
-            # print(f"updated record {record_object.recordarray}")
-        else:
-            # print(f"update record was not necessary")
+        # if record_before.values != record_after.values:
+        #     # print(f"updated record {record_object.recordarray}")
+        # else:
+        #     # print(f"update record was not necessary")
 
         return record_object
 
@@ -588,7 +588,7 @@ class Table(object):
                 return
             if table_before[index].values != record.values:
                 record_objects += [table_after[index]]
-                for row in record_objects:
+                # for row in record_objects:
                     # print(f"updated row {row.recordarray}")
                 return record_objects
 
