@@ -230,7 +230,7 @@ class WorldOverview(QMainWindow):
 
         # we will create a gridlayout of the selected record with all the widgets and a seperate array with the widgets in order to manipulate them and pull values
         if self.record_selected != None:
-            self.record_layout = RecordLayout(self.record_selected)
+            self.record_layout = RecordLayout(self.record_selected, self.tables)
         else:
             self.record_layout = QGridLayout()
         record_frame = QRaisedFrame()

@@ -49,8 +49,8 @@ from source.database import (
     Record,
 )
 
-class RecordLayout(QHBoxLayout):
-    def __init__(self, record):
+class RecordLayout(QGridLayout):
+    def __init__(self, record, tables):
         super().__init__()
 
         """
@@ -58,6 +58,7 @@ class RecordLayout(QHBoxLayout):
         keeps track of the widgets for easy manipulation
         """
 
+        self.tables = tables
         self.record = record
         self.widgets = []
         self.build_layout()
@@ -65,36 +66,13 @@ class RecordLayout(QHBoxLayout):
     def build_layout(self):
 
         self.build_detailbox()
-        self.build_linkedbox()
+        self.build_childrenbox()
+        self.build_xrefbox()
 
-    def build_linkedbox(self):
-
-        linkedbox = QVBoxLayout()
-
-        table = self.record.table
-        # print(f"table = {table}")
-
-        recordarray = self.record.recordarray
-        # print(f"recordarray = {recordarray}")
-
-        # for index, columntype in enumerate(table.column_types):
-
-        #     # set title for widget
-        #     widget_title = QLabel()
-        #     widget_title.setText(table.column_names[index])
-
-        # # add widget and title to the layout
-        # linkedbox.addWidget(widget_title)
-        # linkedbox.addWidget(widget_value)
-        
-        # finish linked window
-        linkedframe = QFrame()
-        linkedframe.setLayout(linkedbox)
-        self.addWidget(linkedframe, 2)
 
     def build_detailbox(self):
 
-        detailbox = QGridLayout()
+        box = QGridLayout()
         table = self.record.table
         # print(f"table = {table}")
 
@@ -198,16 +176,58 @@ class RecordLayout(QHBoxLayout):
             width = table.column_placement[index][3]
 
             # add widget and title to the layout
-            detailbox.addWidget(widget_value, row, column, heigth, width)
-            detailbox.addWidget(widget_title, row, 0, heigth, 1)
+            box.addWidget(widget_value, row, column, heigth, width)
+            box.addWidget(widget_title, row, 0, heigth, 1)
 
             # add the value widget to the list of widgets for easy access of values
             self.widgets.append(widget_value)
 
-        # finish detail window
-        detailframe = QFrame()
-        detailframe.setLayout(detailbox)
-        self.addWidget(detailframe, 8)
+        # finish  window
+        frame = QFrame()
+        frame.setLayout(box)
+        self.addWidget(frame, 0,0,2,8)
+
+    def build_childrenbox(self):
+        """
+        gather the one to many children of this record,
+        so gather the tables that have a foreign key to this table
+        and show the foreign records (children) belonging to this record
+
+        i.e. if this record denotes the 'Roman Empire', collect all the countries belonging to it
+        """
+        box = QVBoxLayout()
+
+        for table in self.tables:
+            reference_text = f"{self.record.table.name}(id)"
+            for ctype in table.column_types:
+                ctypesplit = ctype.split("_", 3)
+                try:
+                    if ctypesplit[2] == reference_text:
+                        widget = QLabel()
+                        widget.setText(f"child found as {reference_text} in {table}")
+                        box.addWidget(widget)
+
+                        # add the value widget to the list of widgets for easy access of values
+                        self.childwidgets.append(widget)
+
+                except:
+                    pass           
+
+        # finish window
+        frame = QFrame()
+        frame.setLayout(box)
+        self.addWidget(frame, 0,1,1,1)
+
+    def build_xrefbox(self):
+
+        box = QVBoxLayout()
+
+
+        
+        # finish window
+        frame = QFrame()
+        frame.setLayout(box)
+        self.addWidget(frame, 1,1,1,1)
 
     def processValues(self):
         """
