@@ -267,7 +267,7 @@ class Database(object):
         query = f"CREATE TABLE IF NOT EXISTS {table} (\n{valuetext}\n);"
         self.execute_query(query)
 
-    def create_records(self, table, column_names = ["integer", "text"], valuepairs = [[1,'test'], [2, 'test']]):
+    def create_records(self, table, column_names, valuepairs):
         
         # print(f"create records database with table {table}, columns {column_names} and valuepairs {valuepairs}")
 
@@ -283,8 +283,8 @@ class Database(object):
             valuepair_placeholders = '(' + ','.join('?' for value in valuepair) + '),\n'
             placeholders += valuepair_placeholders
         placeholders = placeholders[:-2]
-        # print(f"placeholders = {placeholders}")
-        # print(f"parameters = {parameters}")
+        print(f"placeholders = {placeholders}")
+        print(f"parameters = {parameters}")
 
         query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
@@ -391,7 +391,7 @@ class Table(object):
         column_types = metadata["column_types"]
 
         print(metadata)
-        table = Table(database, tablename, column_names, column_types)
+        table = Table(database, tablename, column_names[2:], column_types[2:])
         return table
 
     def move_to_database(self, db):
@@ -566,6 +566,7 @@ class Table(object):
         It returns the last row as a Record object
         """
 
+        print(f"createRecord {values}")
         # print(values)
         maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
         # print(maxordering)
@@ -586,6 +587,8 @@ class Table(object):
         return recordobject
 
     def createRecords(self, records):
+
+        print(f"createRecords {records}")
 
         if len(records) == 1:
             records = [self.createRecord(records[0])]
@@ -630,7 +633,7 @@ class Table(object):
         # print(f"record before = {record_before}")
 
         # update the record
-        # print(valuepairs)
+        print(valuepairs)
         self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
 
         # get record after updating

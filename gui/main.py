@@ -187,7 +187,8 @@ class WorldOverview(QMainWindow):
         # print(f"table records {self.table_records}")
         if self.table_records != []:
             for record in self.table_records:
-                name = record.values[0] # take name as first value after primary key
+                print(record.values)
+                name = record.values[1] # take name as first value after primary key
                 listwidgetitem = QListWidgetItem(f"{name}")
                 listwidgetitem.setData(1, record)
                 listwidget.addItem(listwidgetitem)
@@ -417,10 +418,11 @@ class WorldOverview(QMainWindow):
 
         # get a Record object for the new record
         newrecord = self.record_layout.processValues()
-        # print(f"newrecord {newrecord.recordarray}")
+        print(f"newrecord including orderer {newrecord.values}")
 
         # create the new record in database and retrieve the new record from database
-        record = newrecord.table.createRecord(values=newrecord.values)
+        # only sending values without orderer as this will be a new record
+        record = newrecord.table.createRecord(values=newrecord.values[1:])
         # print(f"record {newrecord.recordarray}")
         # set the selected record to the new record
         self.set_record_selection(record)

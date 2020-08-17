@@ -143,7 +143,7 @@ def get_parent_tables(filename):
         db = Database(filename=filename),
         name = "research",
         column_names = ["name", "description", "source"],
-        column_types = ["VARCHAR(255)", "TEXT", "BLOB"],
+        column_types = ["VARCHAR(255)", "TEXT", "VARCHAR(255)"],
     ))
 
     return tables
