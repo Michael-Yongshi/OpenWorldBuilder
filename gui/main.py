@@ -153,6 +153,8 @@ class WorldOverview(QMainWindow):
         self.setCentralWidget(nested_widget)
         self.showMaximized()
 
+        # self.widgets[1].setFocus()
+
         # build a startup window if filename is empty
         if self.filename == None:
             self.open_database(filename="")

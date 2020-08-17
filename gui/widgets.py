@@ -168,6 +168,10 @@ class RecordLayout(QGridLayout):
                         widget_value = QLineEdit()
                         widget_value.setText("Error setting widget")
 
+                # set focus if widget is "name"
+                if table.column_names[index] == "name":
+                    widget_value.setFocusPolicy(Qt.StrongFocus)
+
             # print(f"column placements are {table.column_placement}")
             # print(f"column placements[index] are {table.column_placement[index]}")
             row = table.column_placement[index][0]
