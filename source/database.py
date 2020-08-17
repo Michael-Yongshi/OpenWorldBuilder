@@ -783,64 +783,64 @@ if __name__ == "__main__":
     print(f"read column types: {charbl.db.read_column_types(charbl.name)}")
     print(f"read column metadata: {charbl.db.read_column_metadata(charbl.name)}")
 
-    # values = ["Einstein", 100, False]
-    # record = charbl.createRecord(values)
-    # print(f"create single record")
-    # print_records([record])
+    values = ["Einstein", 100, False]
+    record = charbl.createRecord(values)
+    print(f"create single record")
+    print_records([record])
 
-    # values = [
-    #     ["Rosenburg", 78, False],
-    #     ["Neil dGrasse Tyson", 57, True],
-    # ]
-    # records = charbl.createRecords(values)
-    # print(f"create multiple records")
-    # print_records(records)
+    values = [
+        ["Rosenburg", 78, False],
+        ["Neil dGrasse Tyson", 57, True],
+    ]
+    records = charbl.createRecords(values)
+    print(f"create multiple records")
+    print_records(records)
+
+    columns = ["name", "age"]
+    records = charbl.readRecords(columns=columns)
+    print(f"read only name and age columns for all records")
+    print_records(records)
 
     # columns = ["name", "age"]
     # records = charbl.readRecords(columns=columns)
     # print(f"read only name and age columns for all records")
     # print_records(records)
 
-    # # columns = ["name", "age"]
-    # # records = charbl.readRecords(columns=columns)
-    # # print(f"read only name and age columns for all records")
-    # # print_records(records)
+    where = [["nobelprizewinner", [True]]]
+    records = charbl.readRecords(where=where)
+    print(f"read where")
+    print_records(records)
 
-    # where = [["nobelprizewinner", [True]]]
-    # records = charbl.readRecords(where=where)
-    # print(f"read where")
-    # print_records(records)
+    valuepairs = [["nobelprizewinner", False]]
+    where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
+    records = charbl.updateRecords(valuepairs=valuepairs, where=where)
+    print(f"update true to false")
+    print_records(records)
 
-    # valuepairs = [["nobelprizewinner", False]]
-    # where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    # records = charbl.updateRecords(valuepairs=valuepairs, where=where)
-    # print(f"update true to false")
-    # print_records(records)
+    valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
+    rowid = 5
+    record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    print(f"update record 'id = 5'")
+    print_records([record])
 
-    # valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
-    # rowid = 5
-    # record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
-    # print(f"update record 'id = 5'")
-    # print_records([record])
+    records = charbl.readRecords()
+    print(f"read all records")
+    print_records(records)
 
-    # records = charbl.readRecords()
-    # print(f"read all records")
-    # print_records(records)
+    reltbl = Table(
+        db = Database(path="", filename="science"),
+        name = "relationships",
+        column_names = ["charid1", "charid2", "description"],
+        column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    )
 
-    # reltbl = Table(
-    #     db = Database(path="", filename="science"),
-    #     name = "relationships",
-    #     column_names = ["charid1", "charid2", "description"],
-    #     column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
-    # )
+    values = [1, 2, "hawking and edison"]
+    record = reltbl.createRecord(values)
+    print(f"create single record")
+    print_records([record])
 
-    # values = [1, 2, "hawking and edison"]
-    # record = reltbl.createRecord(values)
-    # print(f"create single record")
-    # print_records([record])
+    records = reltbl.readRecords()
+    print(f"read all records")
+    print_records(records)
 
-    # records = reltbl.readRecords()
-    # print(f"read all records")
-    # print_records(records)
-
-    # records = reltbl.readForeignValues('charid1')
+    records = reltbl.readForeignValues('charid1')

@@ -293,7 +293,7 @@ class WorldOverview(QMainWindow):
 
             if check_existance(filename=name) == False:
                 self.clean_variables()
-                self.table_builder(name)
+                self.tables = table_builder(name)
                 self.filename = name
                 self.initUI()
 
