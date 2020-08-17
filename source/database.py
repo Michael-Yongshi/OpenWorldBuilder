@@ -69,20 +69,18 @@ def check_existance(filename, path = "", extension = ".sqlite"):
 
 class Database(object):
 
-    def __init__(self, path = "", filename = ""):
+    def __init__(self, filename, path = ""):
 
         self.connection = None
-
-        if filename == "":
-            filename = "test"
         self.filename = filename
 
         if path == "":
             path = get_localpath()
         self.path = path
         
+        print(f"{path} and {filename}")
         try:
-            destination = os.path.join(path, filename + ".sqlite")
+            destination = os.path.join(path, f"{filename}.sqlite")
 
             # check if directory already exists, if not create it
             if not os.path.exists(path):
@@ -124,10 +122,10 @@ class Database(object):
         cursor = self.connection.cursor()
 
         try:
-            # print(f"--------------------\n{query}\n")
+            print(f"--------------------\n{query}\n")
             cursor.execute(query)
             self.connection.commit()
-            # print("Success!\n--------------------")
+            print("Success!\n--------------------")
 
             return cursor
 
@@ -154,26 +152,67 @@ class Database(object):
         query = f"SELECT name FROM sqlite_master WHERE type='table';"
         
         cursor = self.execute_query(query=query)
-        tables = cursor.fetchall()
+        data = cursor.fetchall()
         # print(tables)
-        # for table in tables:
-            # print(table)
+
+        tables = []
+        for datapoint in data:
+            tables += [datapoint[0]]
 
         return tables
 
-    def read_column_names(self, table = "test"):
+    def read_column_names(self, table):
 
         query = f"SELECT * FROM {table};"
         
         cursor = self.execute_query(query=query)
         description = cursor.description
-
+        print(description)
+        
         # print(description)
         columns = []
         for record in description:
             # print(record[0])
             columns += [record[0]]
         
+        # print(columns)
+        return columns
+
+    def read_column_metadata(self, table):
+        
+        # print(table)
+        cursor = self.execute_query(f'PRAGMA table_info({table})')
+        data = cursor.fetchall()
+
+        column_order = []
+        column_names = []
+        column_types = []
+
+        for datapoint in data:
+            # print(f"{datapoint[0]} {datapoint[1]} {datapoint[2]}")
+            column_order += [datapoint[0]]
+            column_names += [datapoint[1]]
+            column_types += [datapoint[2]]
+
+        metadata = {
+            "column_order": column_order,
+            "column_names": column_names,
+            "column_types": column_types,
+        }
+        # print(metadata)
+
+        return metadata
+
+    def read_column_types(self, table):
+
+        cursor = self.execute_query(f'PRAGMA table_info({table})')
+        data = cursor.fetchall()
+
+        columns = []
+        for datapoint in data:
+            # print(f"{datapoint[0]} {datapoint[1]} {datapoint[2]}")
+            columns += [datapoint[2]]
+
         # print(columns)
         return columns
 
@@ -225,10 +264,10 @@ class Database(object):
         valuetext = ',\n'.join(variables)
 
         # create variables text
-        query = f"CREATE TABLE IF NOT EXISTS {table} (\nid INTEGER PRIMARY KEY AUTOINCREMENT,\n{valuetext}\n);"
+        query = f"CREATE TABLE IF NOT EXISTS {table} (\n{valuetext}\n);"
         self.execute_query(query)
 
-    def create_records(self, table, column_names = ["integer", "text"], valuepairs = [[1,'test'], [2, 'test']]):
+    def create_records(self, table, column_names, valuepairs):
         
         # print(f"create records database with table {table}, columns {column_names} and valuepairs {valuepairs}")
 
@@ -244,8 +283,8 @@ class Database(object):
             valuepair_placeholders = '(' + ','.join('?' for value in valuepair) + '),\n'
             placeholders += valuepair_placeholders
         placeholders = placeholders[:-2]
-        # print(f"placeholders = {placeholders}")
-        # print(f"parameters = {parameters}")
+        print(f"placeholders = {placeholders}")
+        print(f"parameters = {parameters}")
 
         query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
@@ -296,6 +335,17 @@ class Database(object):
 
         return lastrow
 
+    def get_max_columncontent(self, table, column):
+
+        query = f"SELECT MAX({column}) FROM {table}"
+
+        cursor = self.execute_query(query)
+        max_columncontent = cursor.fetchall()
+        if max_columncontent[0][0] == None:
+            max_columncontent = [(0,)]
+
+        return max_columncontent[0][0]
+
     def transform_boolean(self, value):
         if value == True:
             value = 1
@@ -314,9 +364,9 @@ class Table(object):
         else:
             self.record_name = record_name
 
-        # set column names and types including the primary key
-        self.column_names = ["id"] + column_names
-        self.column_types = ["INTEGER"] + column_types
+        # set column names and types including the primary key and ordering column
+        self.column_names = ["id", "ordering"] + column_names
+        self.column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER"] + column_types
 
         self.set_defaults(defaults)
         self.set_column_placement(column_placement)
@@ -324,12 +374,25 @@ class Table(object):
         # set connection to database
         self.db = db
 
+        #### check if table exists, then only open the table, check integrity
         # create tables in database
         self.createTable()
 
         # initiate records
         if initial_records != []:
             self.createRecords(records=initial_records)
+
+    @staticmethod
+    def open_existing_table(database, tablename):
+        
+        metadata = database.read_column_metadata(tablename)
+        column_order = metadata["column_order"]
+        column_names = metadata["column_names"]
+        column_types = metadata["column_types"]
+
+        print(metadata)
+        table = Table(database, tablename, column_names[2:], column_types[2:])
+        return table
 
     def move_to_database(self, db):
 
@@ -358,7 +421,7 @@ class Table(object):
 
     def set_defaults(self, defaults):
         if defaults != []:
-            self.defaults = [-1] + defaults
+            self.defaults = [-1, 0] + defaults
         else:
             self.defaults = []
 
@@ -383,7 +446,8 @@ class Table(object):
 
         if column_placement != []:
             id_placement = [0,0,1,1]
-            self.column_placement = [id_placement] + column_placement
+            ordering_placement = [0,1,1,1]
+            self.column_placement = [id_placement] + [ordering_placement] + column_placement
 
         else:
             self.column_placement = []
@@ -409,22 +473,6 @@ class Table(object):
     def readRecords(self, columns=[], where=[]):
 
         columns = self.column_names
-        #if columns is not given, set columns to all columns of the table
-        # if columns == []:
-        #     columns = self.column_names
-
-        # # if strings are given, add the primary key column in front
-        # elif isinstance(columns[0], str):
-        #     columns = ["id"] + columns
-
-        # # if numbers are given, add the primary column in front and convert to column names
-        # else:
-        #     column_numbers = [0] + columns
-        #     columns = []
-        #     for column_number in column_numbers:
-        #         columns += self.column_names[column_number]
-
-        # print(f"columns {columns}")
 
         # only do something with where if its given
         if where != []:
@@ -481,8 +529,8 @@ class Table(object):
         sqltable = self.db.read_records(table=ftable, columns = [])
         print(f"all table records {sqltable}")
 
-        # by default just assuming we are pointing to primary key in first column and second column contains something meaningfull
-        fcolumns = [fcolumn_names[0], fcolumn_names[1]]
+        # by default just assuming we are pointing to primary key in first column and third column contains something meaningfull
+        fcolumns = [fcolumn_names[0], fcolumn_names[2]]
         sqlcolumns = self.db.read_records(table=ftable, columns = fcolumns)
 
         print(f"all table records with foreign key column {sqlcolumns}")
@@ -494,16 +542,17 @@ class Table(object):
         gathers the table name and the column info and then forwards them to
         create_table method of the Database object
         """
-
+        # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
         columns = []
 
         # get column info without primary key
-        column_names = self.column_names[1:]
-        column_types = self.column_types[1:]
+        column_names = self.column_names
+        column_types = self.column_types
 
         # enumerate over column names without id column
         for index, column_name in enumerate(column_names):
             columns.append(f"{column_name} {column_types[index]}")
+        # print(columns)
 
         # print(f"query create table {columns}")
         self.db.create_table(table=self.name, variables=columns)
@@ -517,33 +566,48 @@ class Table(object):
         It returns the last row as a Record object
         """
 
-        # # print(f"values {values}")
-        # for index, value in enumerate(values):
-        #     values[index] = self.transform_boolean(value)
-        valuepairs = [values]
+        print(f"createRecord {values}")
+        # print(values)
+        maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
+        # print(maxordering)
+        valuepairs = [[maxordering] + values]
+        # print(valuepairs)
 
         self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=valuepairs)
+        self.defaults[1] = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
 
         newrows_last = self.db.get_max_row(self.name)
+        print(newrows_last)
         where = [["id",[newrows_last]]]
 
         sqlrecords = self.db.read_records(table=self.name, where=where)
-        print(f"Records created: {sqlrecords}")
+        print(f"Record created: {sqlrecords}")
         recordobject = Record(self, sqlrecords[0])
 
         return recordobject
 
     def createRecords(self, records):
 
+        print(f"createRecords {records}")
+
         if len(records) == 1:
             records = [self.createRecord(records[0])]
             return records
 
         else:
+            # print(records)
+            maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
+            # print(maxordering)
+            for index, record in enumerate(records):
+                records[index] = [maxordering] + record
+                maxordering += 1
+            # print(records)
+
             newrows_first = self.db.get_max_row(self.name) + 1
-
+            
             self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=records)
-
+            self.defaults[1] = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
+            
             newrows_last = self.db.get_max_row(self.name)
 
             wherevalues = list(range(newrows_first, newrows_last + 1))
@@ -569,7 +633,7 @@ class Table(object):
         # print(f"record before = {record_before}")
 
         # update the record
-        # print(valuepairs)
+        print(valuepairs)
         self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
 
         # get record after updating
@@ -669,7 +733,10 @@ class Record(object):
 
     def setrecordpairs(self):
         self.recordpairs = []
+        print(self.table.column_names)
+        print(self.recordarray)
         for index, name in enumerate(self.table.column_names):
+            
             recordpair = [name, self.recordarray[index]]
             self.recordpairs += [recordpair]
         # print(f"set recordpairs {self.recordpairs}")
@@ -714,7 +781,10 @@ if __name__ == "__main__":
     )
     
     #test functions of table
-    print(f"read column names: {charbl.column_names}")
+    print(f"read table names: {charbl.db.read_table_names()}")
+    print(f"read column names: {charbl.db.read_column_names(charbl.name)}")
+    print(f"read column types: {charbl.db.read_column_types(charbl.name)}")
+    print(f"read column metadata: {charbl.db.read_column_metadata(charbl.name)}")
 
     values = ["Einstein", 100, False]
     record = charbl.createRecord(values)
