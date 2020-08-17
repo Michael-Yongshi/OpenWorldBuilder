@@ -138,7 +138,26 @@ def get_parent_tables(filename):
         column_types = ["VARCHAR(255)", "TEXT"],
     ))
 
+    # Magic
+    tables.append(Table(
+        db = Database(filename=filename),
+        name = "magics",
+        column_names = ["name", "description"],
+        column_types = ["VARCHAR(255)", "TEXT"],
+    ))
+
+    # Tech
+    tables.append(Table(
+        db = Database(filename=filename),
+        name = "technologies",
+        record_name= "technology",
+        column_names = ["name", "description"],
+        column_types = ["VARCHAR(255)", "TEXT"],
+    ))
+
     # Research
+
+
     tables.append(Table(
         db = Database(filename=filename),
         name = "research",
