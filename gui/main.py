@@ -279,6 +279,7 @@ class WorldOverview(QMainWindow):
         
         return pageboxframe
 
+
     def new_database(self):
         """Create a new world"""
 
@@ -291,7 +292,11 @@ class WorldOverview(QMainWindow):
         if okPressed and name:
 
             if check_existance(filename=name) == False:
-                self.open_database(name)
+                self.clean_variables()
+                self.table_builder(name)
+                self.filename = name
+                self.initUI()
+
             else:
                 QMessageBox.warning(self, "Couldn't create world!", f"database with {name} already exists!", QMessageBox.Ok)
 
@@ -316,14 +321,24 @@ class WorldOverview(QMainWindow):
         if filename != "" and filename != None:
             print(filename)
             # clean data
+            self.clean_variables()
+
+            db = Database(filename=filename)
+            tablenames = db.read_table_names()
+            print(tablenames)
+            for tblname in tablenames:
+                if tblname != 'sqlite_sequence':
+                    self.tables += [Table.open_existing_table(db, tblname)]
+
+            self.filename = filename
+            self.initUI()
+
+    def clean_variables(self):
+            # clean data
             self.tables = []
             self.table_selected = None # Table object
             self.table_records = [] # list of records from table_selected
             self.record_selected = None
-
-            self.filename = filename
-            self.tables = table_builder(self.filename)
-            self.initUI()
 
     def save_database(self):
         pass

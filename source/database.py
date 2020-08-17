@@ -69,20 +69,18 @@ def check_existance(filename, path = "", extension = ".sqlite"):
 
 class Database(object):
 
-    def __init__(self, path = "", filename = ""):
+    def __init__(self, filename, path = ""):
 
         self.connection = None
-
-        if filename == "":
-            filename = "test"
         self.filename = filename
 
         if path == "":
             path = get_localpath()
         self.path = path
         
+        print(f"{path} and {filename}")
         try:
-            destination = os.path.join(path, filename + ".sqlite")
+            destination = os.path.join(path, f"{filename}.sqlite")
 
             # check if directory already exists, if not create it
             if not os.path.exists(path):
@@ -154,10 +152,12 @@ class Database(object):
         query = f"SELECT name FROM sqlite_master WHERE type='table';"
         
         cursor = self.execute_query(query=query)
-        tables = cursor.fetchall()
+        data = cursor.fetchall()
         # print(tables)
-        # for table in tables:
-            # print(table)
+
+        tables = []
+        for datapoint in data:
+            tables += [datapoint[0]]
 
         return tables
 
@@ -167,13 +167,52 @@ class Database(object):
         
         cursor = self.execute_query(query=query)
         description = cursor.description
-
+        print(description)
+        
         # print(description)
         columns = []
         for record in description:
             # print(record[0])
             columns += [record[0]]
         
+        # print(columns)
+        return columns
+
+    def read_column_metadata(self, table):
+        
+        # print(table)
+        cursor = self.execute_query(f'PRAGMA table_info({table})')
+        data = cursor.fetchall()
+
+        column_order = []
+        column_names = []
+        column_types = []
+
+        for datapoint in data:
+            # print(f"{datapoint[0]} {datapoint[1]} {datapoint[2]}")
+            column_order += [datapoint[0]]
+            column_names += [datapoint[1]]
+            column_types += [datapoint[2]]
+
+        metadata = {
+            "column_order": column_order,
+            "column_names": column_names,
+            "column_types": column_types,
+        }
+        # print(metadata)
+
+        return metadata
+
+    def read_column_types(self, table):
+
+        cursor = self.execute_query(f'PRAGMA table_info({table})')
+        data = cursor.fetchall()
+
+        columns = []
+        for datapoint in data:
+            # print(f"{datapoint[0]} {datapoint[1]} {datapoint[2]}")
+            columns += [datapoint[2]]
+
         # print(columns)
         return columns
 
@@ -342,6 +381,18 @@ class Table(object):
         # initiate records
         if initial_records != []:
             self.createRecords(records=initial_records)
+
+    @staticmethod
+    def open_existing_table(database, tablename):
+        
+        metadata = database.read_column_metadata(tablename)
+        column_order = metadata["column_order"]
+        column_names = metadata["column_names"]
+        column_types = metadata["column_types"]
+
+        print(metadata)
+        table = Table(database, tablename, column_names, column_types)
+        return table
 
     def move_to_database(self, db):
 
@@ -727,66 +778,69 @@ if __name__ == "__main__":
     )
     
     #test functions of table
-    print(f"read column names: {charbl.column_names}")
+    print(f"read table names: {charbl.db.read_table_names()}")
+    print(f"read column names: {charbl.db.read_column_names(charbl.name)}")
+    print(f"read column types: {charbl.db.read_column_types(charbl.name)}")
+    print(f"read column metadata: {charbl.db.read_column_metadata(charbl.name)}")
 
-    values = ["Einstein", 100, False]
-    record = charbl.createRecord(values)
-    print(f"create single record")
-    print_records([record])
+    # values = ["Einstein", 100, False]
+    # record = charbl.createRecord(values)
+    # print(f"create single record")
+    # print_records([record])
 
-    values = [
-        ["Rosenburg", 78, False],
-        ["Neil dGrasse Tyson", 57, True],
-    ]
-    records = charbl.createRecords(values)
-    print(f"create multiple records")
-    print_records(records)
-
-    columns = ["name", "age"]
-    records = charbl.readRecords(columns=columns)
-    print(f"read only name and age columns for all records")
-    print_records(records)
+    # values = [
+    #     ["Rosenburg", 78, False],
+    #     ["Neil dGrasse Tyson", 57, True],
+    # ]
+    # records = charbl.createRecords(values)
+    # print(f"create multiple records")
+    # print_records(records)
 
     # columns = ["name", "age"]
     # records = charbl.readRecords(columns=columns)
     # print(f"read only name and age columns for all records")
     # print_records(records)
 
-    where = [["nobelprizewinner", [True]]]
-    records = charbl.readRecords(where=where)
-    print(f"read where")
-    print_records(records)
+    # # columns = ["name", "age"]
+    # # records = charbl.readRecords(columns=columns)
+    # # print(f"read only name and age columns for all records")
+    # # print_records(records)
 
-    valuepairs = [["nobelprizewinner", False]]
-    where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    records = charbl.updateRecords(valuepairs=valuepairs, where=where)
-    print(f"update true to false")
-    print_records(records)
+    # where = [["nobelprizewinner", [True]]]
+    # records = charbl.readRecords(where=where)
+    # print(f"read where")
+    # print_records(records)
 
-    valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
-    rowid = 5
-    record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
-    print(f"update record 'id = 5'")
-    print_records([record])
+    # valuepairs = [["nobelprizewinner", False]]
+    # where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
+    # records = charbl.updateRecords(valuepairs=valuepairs, where=where)
+    # print(f"update true to false")
+    # print_records(records)
 
-    records = charbl.readRecords()
-    print(f"read all records")
-    print_records(records)
+    # valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
+    # rowid = 5
+    # record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    # print(f"update record 'id = 5'")
+    # print_records([record])
 
-    reltbl = Table(
-        db = Database(path="", filename="science"),
-        name = "relationships",
-        column_names = ["charid1", "charid2", "description"],
-        column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
-    )
+    # records = charbl.readRecords()
+    # print(f"read all records")
+    # print_records(records)
 
-    values = [1, 2, "hawking and edison"]
-    record = reltbl.createRecord(values)
-    print(f"create single record")
-    print_records([record])
+    # reltbl = Table(
+    #     db = Database(path="", filename="science"),
+    #     name = "relationships",
+    #     column_names = ["charid1", "charid2", "description"],
+    #     column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    # )
 
-    records = reltbl.readRecords()
-    print(f"read all records")
-    print_records(records)
+    # values = [1, 2, "hawking and edison"]
+    # record = reltbl.createRecord(values)
+    # print(f"create single record")
+    # print_records([record])
 
-    records = reltbl.readForeignValues('charid1')
+    # records = reltbl.readRecords()
+    # print(f"read all records")
+    # print_records(records)
+
+    # records = reltbl.readForeignValues('charid1')
