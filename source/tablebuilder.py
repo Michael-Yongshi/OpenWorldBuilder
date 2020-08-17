@@ -37,10 +37,10 @@ def get_normal_tables(filename):
         column_types = ["VARCHAR(255)", "VARCHAR(255)", "TEXT"],
         column_placement = [
             # row, column, height, width
-            # id by default is [0,0,1,1]
-            [1,0,1,1],
-            [2,0,1,1],
-            [3,0,10,1],
+            # id by default is [0,0,1,1] and ordering [0,1,1,1]
+            [1,0,1,2],
+            [2,0,1,2],
+            [3,0,10,2],
         ],
     ))
 
@@ -143,7 +143,7 @@ def get_parent_tables(filename):
         db = Database(filename=filename),
         name = "research",
         column_names = ["name", "description", "source"],
-        column_types = ["VARCHAR(255)", "TEXT", "BLOB"],
+        column_types = ["VARCHAR(255)", "TEXT", "VARCHAR(255)"],
     ))
 
     return tables
