@@ -69,29 +69,27 @@ def check_existance(filename, path = "", extension = ".sqlite"):
 
 class Database(object):
 
-    def __init__(self, filename, path = ""):
+    def __init__(self, filename, path=""):
 
-        self.connection = None
         self.filename = filename
 
         if path == "":
             path = get_localpath()
         self.path = path
+
+        self.connection = None
+        self.tables = []
         
-        print(f"{path} and {filename}")
-        try:
-            destination = os.path.join(path, f"{filename}.sqlite")
+        existance = check_existance(path=path, filename=filename)
+        self.connect_database()
 
-            # check if directory already exists, if not create it
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-            self.connection = sqlite3.connect(destination)
-            print("Connection to SQLite DB successful")
-
-        except Error as e:
-
-            print(f"The error '{e}' occurred")
+        if existance == True:
+            print(f"Database with path {path} and filename {filename} already exists, connection opened to existing database")
+            
+            # pull all sql tables and records
+            self.get_tables()
+        else:
+            print(f"Database with path {path} and filename {filename} could not be found, connection opened to new database")
 
     def delete_database(self):
 
@@ -101,6 +99,40 @@ class Database(object):
         os.remove(completepath)
 
         print(f"Database deleted!")
+
+    def connect_database(self):
+
+        try:
+            destination = os.path.join(self.path, f"{self.filename}.sqlite")
+
+            # check if directory already exists, if not create it
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+
+            self.connection = sqlite3.connect(destination)
+            print("Connection to SQLite DB successful")
+
+        except Error as e:
+
+            print(f"The error '{e}' occurred")
+
+    def close_database(self):
+        pass
+
+    def get_tables(self):
+        """
+        Refresh all tables
+        """
+
+        # get existing tables
+        self.tables = []
+        tablenames = self.read_table_names()
+        print(f"getting tablenames for database {self.filename}")
+
+        for tablename in tablenames:
+            tableobject = Table.open_existing_table(self, tablename)
+            tableobject.readRecords()
+            self.tables += [tableobject]
 
     def execute_query(self, query):
         """
@@ -253,19 +285,34 @@ class Database(object):
 
         return records
 
-    def create_table(self, table, variables = ["integer INTEGER","text TEXT"]):
+    def create_table(self, name, column_names = [], column_types = []):
         """
         collects input of table name and column information
         builds a single query and 
         forwards to execute_query
         """
         
+        columns = []
+        # enumerate over column names and types
+        for index, column_name in enumerate(column_names):
+            columns += [f"{column_name} {column_types[index]}"]
+
         # transform variables to string format
-        valuetext = ',\n'.join(variables)
+        valuetext = ',\n'.join(columns)
 
         # create variables text
-        query = f"CREATE TABLE IF NOT EXISTS {table} (\n{valuetext}\n);"
+        query = f"CREATE TABLE IF NOT EXISTS {name} (\n{valuetext}\n);"
         self.execute_query(query)
+
+        tableobject = Table(
+            db = self,
+            name = name,
+            column_names = column_names,
+            column_types = column_types,
+        )
+
+        self.tables += [tableobject]
+        return tableobject
 
     def create_records(self, table, column_names, valuepairs):
         
@@ -365,22 +412,22 @@ class Table(object):
             self.record_name = record_name
 
         # set column names and types including the primary key and ordering column
-        self.column_names = ["id", "ordering"] + column_names
-        self.column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER"] + column_types
+        self.column_names = column_names
+        self.column_types = column_types
 
         self.set_defaults(defaults)
         self.set_column_placement(column_placement)
 
         # set connection to database
         self.db = db
+        self.readRecords()
 
-        #### check if table exists, then only open the table, check integrity
         # create tables in database
-        self.createTable()
+        # self.createTable()
 
         # initiate records
-        if initial_records != []:
-            self.createRecords(records=initial_records)
+        # if initial_records != []:
+        #     self.createRecords(records=initial_records)
 
     @staticmethod
     def open_existing_table(database, tablename):
@@ -488,16 +535,16 @@ class Table(object):
 
         sqlrecords = self.db.read_records(table=self.name, columns=columns, where=where)
 
-        records = []
+        self.records = []
         # print(sqlrecords)
         for record in sqlrecords:
             valuearray = []
             for value in record:
                 valuearray += [value]
             recordobject = Record(self, valuearray)
-            records += [recordobject]
+            self.records += [recordobject]
 
-        return records
+        return self.records
 
     def readForeignValues(self, column):
         """
@@ -537,25 +584,23 @@ class Table(object):
 
         return sqlcolumns
 
-    def createTable(self):
-        """
-        gathers the table name and the column info and then forwards them to
-        create_table method of the Database object
-        """
-        # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
-        columns = []
+    # def createTable(self):
+    #     """
+    #     gathers the table name and the column info and then forwards them to
+    #     create_table method of the Database object
+    #     """
 
-        # get column info without primary key
-        column_names = self.column_names
-        column_types = self.column_types
+    #     # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
+    #     columns = []
 
-        # enumerate over column names without id column
-        for index, column_name in enumerate(column_names):
-            columns.append(f"{column_name} {column_types[index]}")
-        # print(columns)
+    #     # get column info without primary key
+    #     column_names = self.column_names
+    #     column_types = self.column_types
 
-        # print(f"query create table {columns}")
-        self.db.create_table(table=self.name, variables=columns)
+    #     # print(columns)
+
+    #     # print(f"query create table {columns}")
+    #     self.db.create_table(name=self.name, column_names=column_names, column_types=column_types)
 
     def createRecord(self, values):
         """
@@ -566,15 +611,7 @@ class Table(object):
         It returns the last row as a Record object
         """
 
-        print(f"createRecord {values}")
-        # print(values)
-        maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
-        # print(maxordering)
-        valuepairs = [[maxordering] + values]
-        # print(valuepairs)
-
-        self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=valuepairs)
-        self.defaults[1] = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
+        self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=[values])
 
         newrows_last = self.db.get_max_row(self.name)
         print(newrows_last)
@@ -595,13 +632,6 @@ class Table(object):
             return records
 
         else:
-            # print(records)
-            maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
-            # print(maxordering)
-            for index, record in enumerate(records):
-                records[index] = [maxordering] + record
-                maxordering += 1
-            # print(records)
 
             newrows_first = self.db.get_max_row(self.name) + 1
             
@@ -766,84 +796,108 @@ if __name__ == "__main__":
     # query= f'SELECT name FROM students WHERE id IN ({placeholders})'
     # print(query)
 
-    db = Database(path="", filename="science")
+    filename = "science"
+    db = Database(path="", filename=filename)
     db.delete_database()
+    print(f"deleted database {filename}")
 
-    charbl = Table(
-        db = Database(path="", filename="science"),
-        name = "scientists",
-        column_names = ["name", "age", "nobelprizewinner"],
-        column_types = ["Text", "Integer", "Bool"],
-        initial_records = [
-            ["Hawking", 68, True],
-            ["Edison's child said \"Apple!\"", 20, True],
-        ]
+    db = Database(filename=filename)
+
+    sciencetbl = db.create_table(
+        name="scientists",
+        column_names = ["id", "ordering", "name", "age", "nobelprizewinner"],
+        column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER", "Text", "Integer", "Bool"],
     )
+    print(f"read table names: {db.read_table_names()}")
+
+    values = [
+        [1, "Hawking", 68, True],
+        [2, "Edison's child said \"Apple!\"", 20, True],
+    ]
+    records = sciencetbl.createRecords(values)
+    print(f"creating initial records")
+    print_records(records)
     
     #test functions of table
-    print(f"read table names: {charbl.db.read_table_names()}")
-    print(f"read column names: {charbl.db.read_column_names(charbl.name)}")
-    print(f"read column types: {charbl.db.read_column_types(charbl.name)}")
-    print(f"read column metadata: {charbl.db.read_column_metadata(charbl.name)}")
+    print(f"read column names: {db.read_column_names(sciencetbl.name)}")
+    print(f"read column types: {db.read_column_types(sciencetbl.name)}")
+    print(f"read column metadata: {db.read_column_metadata(sciencetbl.name)}")
 
-    values = ["Einstein", 100, False]
-    record = charbl.createRecord(values)
+    values = [3, "Einstein", 100, False]
+    record = sciencetbl.createRecord(values)
     print(f"create single record")
     print_records([record])
 
     values = [
-        ["Rosenburg", 78, False],
-        ["Neil dGrasse Tyson", 57, True],
+        [4, "Rosenburg", 78, False],
+        [5, "Neil dGrasse Tyson", 57, True],
     ]
-    records = charbl.createRecords(values)
+    records = sciencetbl.createRecords(values)
     print(f"create multiple records")
     print_records(records)
 
-    columns = ["name", "age"]
-    records = charbl.readRecords(columns=columns)
-    print(f"read only name and age columns for all records")
-    print_records(records)
-
     # columns = ["name", "age"]
-    # records = charbl.readRecords(columns=columns)
+    # records = sciencetbl.readRecords(columns=columns)
     # print(f"read only name and age columns for all records")
     # print_records(records)
 
-    where = [["nobelprizewinner", [True]]]
-    records = charbl.readRecords(where=where)
-    print(f"read where")
-    print_records(records)
+    # # columns = ["name", "age"]
+    # # records = sciencetbl.readRecords(columns=columns)
+    # # print(f"read only name and age columns for all records")
+    # # print_records(records)
 
-    valuepairs = [["nobelprizewinner", False]]
-    where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    records = charbl.updateRecords(valuepairs=valuepairs, where=where)
-    print(f"update true to false")
-    print_records(records)
+    # where = [["nobelprizewinner", [True]]]
+    # records = sciencetbl.readRecords(where=where)
+    # print(f"read where")
+    # print_records(records)
 
-    valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
-    rowid = 5
-    record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
-    print(f"update record 'id = 5'")
-    print_records([record])
+    # valuepairs = [["nobelprizewinner", False]]
+    # where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
+    # records = sciencetbl.updateRecords(valuepairs=valuepairs, where=where)
+    # print(f"update true to false")
+    # print_records(records)
 
-    records = charbl.readRecords()
-    print(f"read all records")
-    print_records(records)
+    # valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
+    # rowid = 5
+    # record = sciencetbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    # print(f"update record 'id = 5'")
+    # print_records([record])
 
-    reltbl = Table(
-        db = Database(path="", filename="science"),
-        name = "relationships",
-        column_names = ["charid1", "charid2", "description"],
-        column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    # records = sciencetbl.readRecords()
+    # print(f"read all records")
+    # print_records(records)
+
+    # reltbl = Table(
+    #     db = Database(path="", filename="science"),
+    #     name = "relationships",
+    #     column_names = ["charid1", "charid2", "description"],
+    #     column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    # )
+
+    # values = [1, 2, "hawking and edison"]
+    # record = reltbl.createRecord(values)
+    # print(f"create single record")
+    # print_records([record])
+
+    # records = reltbl.readRecords()
+    # print(f"read all records")
+    # print_records(records)
+
+    # records = reltbl.readForeignValues('charid1')
+
+
+
+    # db.close()
+
+    db = Database(filename="science")
+    print(f"read table names: {db.read_table_names()}")
+
+    teachertbl = db.create_table(
+        name="teachers",
+        column_names = ["id", "ordering", "name", "age", "active"],
+        column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER", "Text", "Integer", "Bool"],
     )
 
-    values = [1, 2, "hawking and edison"]
-    record = reltbl.createRecord(values)
-    print(f"create single record")
-    print_records([record])
-
-    records = reltbl.readRecords()
-    print(f"read all records")
-    print_records(records)
-
-    records = reltbl.readForeignValues('charid1')
+    for table in db.tables:
+        print(f"printing for table: {table.name}")
+        print_records(table.records)
