@@ -100,6 +100,34 @@ class Database(object):
 
         print(f"Database deleted!")
 
+    def saveas_database(self, filename, path=""):
+
+        if path == "":
+            path = get_localpath()
+        self.path = path
+
+        existance = check_existance(path=path, filename=filename)
+
+        if existance == True:
+            print(f"Database with path {path} and filename {filename} already exists, connection refused!")
+            
+        else:
+            print(f"Database with path {path} and filename {filename} could not be found, saving database to new file")
+
+            saveas_file(
+                srcfile = self.filename, 
+                dstfile = filename,
+                srcpath = self.path,
+                dstpath = path,
+                )
+
+            new_database = Database(
+                filename=filename, 
+                path=path,
+            )
+
+            return new_database
+
     def connect_database(self):
 
         try:
@@ -117,7 +145,7 @@ class Database(object):
             print(f"The error '{e}' occurred")
 
     def close_database(self):
-        pass
+        self.connection.close()
 
     def get_tables(self):
         """
@@ -420,7 +448,7 @@ class Table(object):
 
         # set connection to database
         self.db = db
-        self.readRecords()
+        self.readAllRecords()
 
         # create tables in database
         # self.createTable()
@@ -440,31 +468,6 @@ class Table(object):
         print(metadata)
         table = Table(database, tablename, column_names[2:], column_types[2:])
         return table
-
-    def move_to_database(self, db):
-
-        # copy table records
-        tablerecords = self.readRecords()
-
-        # connect to new database
-        self.db = db
-
-        # create tables in new database
-        self.createTable()
-
-        # copy records in new database
-        tablevalues = []
-        for record in tablerecords:
-            values = []
-
-            for value in record.values:
-                values += [value]
-
-            # print(f"values {values}")
-            tablevalues += [values]
-
-        # print(f"tablevalues {tablevalues}")
-        self.createRecords(tablevalues)
 
     def set_defaults(self, defaults):
         if defaults != []:
@@ -517,6 +520,21 @@ class Table(object):
         
         return self.db.get_max_row(table=self.name)
 
+    def readAllRecords(self):
+
+        sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where="")
+
+        self.records = []
+        # print(sqlrecords)
+        for record in sqlrecords:
+            valuearray = []
+            for value in record:
+                valuearray += [value]
+            recordobject = Record(self, valuearray)
+            self.records += [recordobject]
+
+        return self.records
+
     def readRecords(self, columns=[], where=[]):
 
         columns = self.column_names
@@ -534,15 +552,6 @@ class Table(object):
         # print(f"where = {where}")
 
         sqlrecords = self.db.read_records(table=self.name, columns=columns, where=where)
-
-        self.records = []
-        # print(sqlrecords)
-        for record in sqlrecords:
-            valuearray = []
-            for value in record:
-                valuearray += [value]
-            recordobject = Record(self, valuearray)
-            self.records += [recordobject]
 
         return self.records
 
@@ -796,7 +805,14 @@ if __name__ == "__main__":
     # query= f'SELECT name FROM students WHERE id IN ({placeholders})'
     # print(query)
 
+    filename = "backup"
+
+    db = Database(path="", filename=filename)
+    db.delete_database()
+    print(f"deleted database {filename}")
+
     filename = "science"
+
     db = Database(path="", filename=filename)
     db.delete_database()
     print(f"deleted database {filename}")
@@ -836,10 +852,10 @@ if __name__ == "__main__":
     print(f"create multiple records")
     print_records(records)
 
-    # columns = ["name", "age"]
-    # records = sciencetbl.readRecords(columns=columns)
-    # print(f"read only name and age columns for all records")
-    # print_records(records)
+    columns = ["name", "age"]
+    records = sciencetbl.readRecords(columns=columns)
+    print(f"read only name and age columns for all records")
+    print_records(records)
 
     # # columns = ["name", "age"]
     # # records = sciencetbl.readRecords(columns=columns)
@@ -885,11 +901,12 @@ if __name__ == "__main__":
 
     # records = reltbl.readForeignValues('charid1')
 
+    db.saveas_database(filename="backup")
+    db.close_database()
 
+    filename = "science"
 
-    # db.close()
-
-    db = Database(filename="science")
+    db = Database(filename=filename)
     print(f"read table names: {db.read_table_names()}")
 
     teachertbl = db.create_table(
