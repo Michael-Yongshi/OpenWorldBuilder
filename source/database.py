@@ -166,14 +166,27 @@ class Database(object):
         # get existing tables
         self.tables = []
         tablenames = self.read_table_names()
-        print(f"getting tablenames for database {self.filename}")
+        # print(f"getting tablenames for database {self.filename}")
 
         for tablename in tablenames:
             tableobject = Table.open_existing_table(self, tablename)
-            tableobject.readRecords()
             self.tables += [tableobject]
 
     def execute_query(self, query):
+        cursor = self.connection.cursor()
+
+        try:
+            print(f"--------------------\n{query}\n")
+            cursor.execute(query)
+            self.connection.commit()
+            print("Success!\n--------------------")
+
+            return cursor
+
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def execute_parameterised_query(self, query, parameters):
         """
         build a parameterised query:
         for a parameter list of 3 length like below
@@ -190,20 +203,7 @@ class Database(object):
         meaning
         this replaces the "%s with our placeholders ('?, ?, ?' in our case)
         """
-        cursor = self.connection.cursor()
 
-        try:
-            print(f"--------------------\n{query}\n")
-            cursor.execute(query)
-            self.connection.commit()
-            print("Success!\n--------------------")
-
-            return cursor
-
-        except Error as e:
-            print(f"The error '{e}' occurred")
-
-    def execute_parameterised_query(self, query, parameters):
         cursor = self.connection.cursor()
 
         try:
@@ -322,7 +322,7 @@ class Database(object):
         cursor = self.execute_parameterised_query(query, parameters)
         records = self.get_records_array(cursor.fetchall())
 
-        print(f"sqlrecords {records}")
+        # print(f"sqlrecords {records}")
         return records
 
     def create_table(self, name, column_names = [], column_types = []):
@@ -331,7 +331,11 @@ class Database(object):
         builds a single query and 
         forwards to execute_query
         """
-        
+
+        # add the primary key
+        column_names = ["id"] + column_names
+        column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT"] + column_types
+
         columns = []
         # enumerate over column names and types
         for index, column_name in enumerate(column_names):
@@ -370,8 +374,8 @@ class Database(object):
             valuepair_placeholders = '(' + ','.join('?' for value in valuepair) + '),\n'
             placeholders += valuepair_placeholders
         placeholders = placeholders[:-2]
-        print(f"placeholders = {placeholders}")
-        print(f"parameters = {parameters}")
+        # print(f"placeholders = {placeholders}")
+        # print(f"parameters = {parameters}")
 
         query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
@@ -479,6 +483,8 @@ class Table(object):
 
         print(metadata)
         table = Table(database, tablename, column_names, column_types)
+        table.readAllRecords()
+
         return table
 
     def set_defaults(self, defaults):
@@ -532,26 +538,33 @@ class Table(object):
         
         return self.db.get_max_row(table=self.name)
 
+    def transform_sql_to_record(self, sqlrecords):
+
+        # print(sqlrecords)
+
+        records = []
+        for record in sqlrecords:
+
+            valuearray = []
+            for value in record:
+                valuearray += [value]
+
+            recordobject = Record(self, valuearray)
+            # print(f"recordarray: {recordobject.recordarray}")
+
+            records += [recordobject]
+
+        return records
+
     def readAllRecords(self):
 
         sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where="")
 
-        self.records = []
-        # print(sqlrecords)
-        for record in sqlrecords:
-            valuearray = []
-            for value in record:
-                valuearray += [value]
-            recordobject = Record(self, valuearray)
-            print(f"valuearray: {valuearray}")
-            print(f"recordarray: {recordobject.recordarray}")
-            self.records += [recordobject]
+        self.records = self.transform_sql_to_record(sqlrecords)
 
         return self.records
 
-    def readRecords(self, columns=[], where=[]):
-
-        columns = self.column_names
+    def readRecords(self, where=[]):
 
         # only do something with where if its given
         if where != []:
@@ -563,11 +576,12 @@ class Table(object):
                     if isinstance(statement[0], int):
                         statement[0] = self.column_names[statement[0]]
 
-        # print(f"where = {where}")
+        # print(f"function {self.readRecords.__name__}: where = {where}")
 
-        sqlrecords = self.db.read_records(table=self.name, columns=columns, where=where)
+        sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where=where)
+        records = self.transform_sql_to_record(sqlrecords)
 
-        return self.records
+        return records
 
     def readForeignValues(self, column):
         """
@@ -607,23 +621,25 @@ class Table(object):
 
         return sqlcolumns
 
-    # def createTable(self):
-    #     """
-    #     gathers the table name and the column info and then forwards them to
-    #     create_table method of the Database object
-    #     """
+    def createTabledepreciated(self):
+        pass
 
-    #     # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
-    #     columns = []
+        #     """
+        #     gathers the table name and the column info and then forwards them to
+        #     create_table method of the Database object
+        #     """
 
-    #     # get column info without primary key
-    #     column_names = self.column_names
-    #     column_types = self.column_types
+        #     # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
+        #     columns = []
 
-    #     # print(columns)
+        #     # get column info without primary key
+        #     column_names = self.column_names
+        #     column_types = self.column_types
 
-    #     # print(f"query create table {columns}")
-    #     self.db.create_table(name=self.name, column_names=column_names, column_types=column_types)
+        #     # print(columns)
+
+        #     # print(f"query create table {columns}")
+        #     self.db.create_table(name=self.name, column_names=column_names, column_types=column_types)
 
     def createRecord(self, values):
         """
@@ -633,22 +649,25 @@ class Table(object):
 
         It returns the last row as a Record object
         """
-
+        print(f"createRecord self.column_names {self.column_names}")
         self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=[values])
 
-        newrows_last = self.db.get_max_row(self.name)
-        print(newrows_last)
-        where = [["id",[newrows_last]]]
+        records = self.readAllRecords()
 
-        sqlrecords = self.db.read_records(table=self.name, where=where)
-        print(f"Record created: {sqlrecords}")
-        recordobject = Record(self, sqlrecords[0])
+        newrows_last = self.db.get_max_row(self.name)
+
+        for record in records:
+            if record.primarykey == newrows_last:
+                recordobject = record
+                break
+
+        print(f"Record created: {recordobject.recordarray}")
 
         return recordobject
 
     def createRecords(self, records):
 
-        print(f"createRecords {records}")
+        # print(f"createRecords {records}")
 
         if len(records) == 1:
             records = [self.createRecord(records[0])]
@@ -659,20 +678,16 @@ class Table(object):
             newrows_first = self.db.get_max_row(self.name) + 1
             
             self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=records)
-            self.defaults[1] = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
-            
-            newrows_last = self.db.get_max_row(self.name)
 
-            wherevalues = list(range(newrows_first, newrows_last + 1))
-            # print(f"wherevalues = {wherevalues}")
-            where = [["id",wherevalues]]
-
-            sqlrecords = self.db.read_records(table=self.name, where=where)
-            print(f"Records created: {sqlrecords}")
+            records = self.readAllRecords()
 
             recordobjects = []
-            for record in sqlrecords:
-                recordobjects += [Record(self, record)]
+            for record in records:
+                if record.primarykey >= newrows_first:
+                    recordobjects += [record]
+
+            for record in recordobjects:
+                print(f"Records created: {record.recordarray}")
 
             return recordobjects
 
@@ -686,7 +701,7 @@ class Table(object):
         # print(f"record before = {record_before}")
 
         # update the record
-        print(valuepairs)
+        # print(valuepairs)
         self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
 
         # get record after updating
@@ -786,8 +801,8 @@ class Record(object):
 
     def setrecordpairs(self):
         self.recordpairs = []
-        print(self.table.column_names)
-        print(self.recordarray)
+        # print(f"Record setting column names {self.table.column_names}")
+        # print(f"Record setting record array {self.recordarray}")
         for index, name in enumerate(self.table.column_names):
             
             recordpair = [name, self.recordarray[index]]
@@ -808,17 +823,6 @@ def print_records(records):
 
 if __name__ == "__main__":
 
-    # string = """ "I am Inevitable" said Thanos' maid."""
-    # # string.replace('"', '\\"')
-    # # string.replace("'", "\\'")
-    # print(string)
-
-    # l = [1,2,3]
-    # placeholder= '?' # For SQLite. See DBAPI paramstyle.
-    # placeholders= ', '.join(placeholder for _ in l)
-    # query= f'SELECT name FROM students WHERE id IN ({placeholders})'
-    # print(query)
-
     filename = "backup"
 
     db = Database(path="", filename=filename)
@@ -835,8 +839,8 @@ if __name__ == "__main__":
 
     sciencetbl = db.create_table(
         name="scientists",
-        column_names = ["id", "ordering", "name", "age", "nobelprizewinner"],
-        column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER", "Text", "Integer", "Bool"],
+        column_names = ["ordering", "name", "age", "nobelprizewinner"],
+        column_types = ["INTEGER", "Text", "Integer", "Bool"],
     )
     print(f"read table names: {db.read_table_names()}")
 
@@ -866,54 +870,50 @@ if __name__ == "__main__":
     print(f"create multiple records")
     print_records(records)
 
-    columns = ["name", "age"]
-    records = sciencetbl.readRecords(columns=columns)
-    print(f"read only name and age columns for all records")
+    # columns = ["name", "age"]
+    # records = sciencetbl.readRecords(columns=columns)
+    # print(f"read only name and age columns for all records")
+    # print_records(records)
+
+    where = [["nobelprizewinner", [True]]]
+    records = sciencetbl.readRecords(where=where)
+    print(f"read where")
     print_records(records)
 
-    # # columns = ["name", "age"]
-    # # records = sciencetbl.readRecords(columns=columns)
-    # # print(f"read only name and age columns for all records")
-    # # print_records(records)
+    valuepairs = [["nobelprizewinner", False]]
+    where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
+    records = sciencetbl.updateRecords(valuepairs=valuepairs, where=where)
+    print(f"update true to false")
+    print_records(records)
 
-    # where = [["nobelprizewinner", [True]]]
-    # records = sciencetbl.readRecords(where=where)
-    # print(f"read where")
-    # print_records(records)
+    valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
+    rowid = 5
+    record = sciencetbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    print(f"update record 'id = 5'")
+    print_records([record])
 
-    # valuepairs = [["nobelprizewinner", False]]
-    # where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    # records = sciencetbl.updateRecords(valuepairs=valuepairs, where=where)
-    # print(f"update true to false")
-    # print_records(records)
+    records = sciencetbl.readRecords()
+    print(f"read all records")
+    print_records(records)
 
-    # valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
-    # rowid = 5
-    # record = sciencetbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
-    # print(f"update record 'id = 5'")
-    # print_records([record])
+    reltbl = db.create_table(
+        name = "relationships",
+        column_names=["charid1", "charid2", "description"],
+        column_types=["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    )
 
-    # records = sciencetbl.readRecords()
-    # print(f"read all records")
-    # print_records(records)
+    reltbl.db.read_column_metadata(reltbl.name)
 
-    # reltbl = Table(
-    #     db = Database(path="", filename="science"),
-    #     name = "relationships",
-    #     column_names = ["charid1", "charid2", "description"],
-    #     column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
-    # )
+    values = [1, 2, "hawking and edison"]
+    record = reltbl.createRecord(values)
+    print(f"create single record")
+    print_records([record])
 
-    # values = [1, 2, "hawking and edison"]
-    # record = reltbl.createRecord(values)
-    # print(f"create single record")
-    # print_records([record])
+    records = reltbl.readRecords()
+    print(f"read all records")
+    print_records(records)
 
-    # records = reltbl.readRecords()
-    # print(f"read all records")
-    # print_records(records)
-
-    # records = reltbl.readForeignValues('charid1')
+    records = reltbl.readForeignValues('charid1')
 
     db.saveas_database(filename="backup")
     db.close_database()
@@ -924,8 +924,8 @@ if __name__ == "__main__":
 
     teachertbl = db.create_table(
         name="teachers",
-        column_names = ["id", "ordering", "name", "age", "active"],
-        column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER", "Text", "Integer", "Bool"],
+        column_names = ["ordering", "name", "age", "active"],
+        column_types = ["INTEGER", "Text", "Integer", "Bool"],
     )
 
     for table in db.tables:
