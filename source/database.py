@@ -40,58 +40,66 @@ def show_files(path = ""):
 
     return path, filelist
 
-def saveas_file(srcfile, dstfile, srcpath = "", dstpath = ""):
+def saveas_file(srcfile, dstfile, srcpath = "", dstpath = "", extension = ".sqlite"):
 
-    srcpath = srcpath if srcpath != "" else get_localpath()
-    dstpath = dstpath if dstpath != "" else get_localpath()
+    if srcpath == "":
+        srcpath = get_localpath()
     
-    src = os.path.join(srcpath, srcfile + ".sqlite")
-    dst = os.path.join(dstpath, dstfile + ".sqlite")
+    if dstpath == "":
+        dstpath = get_localpath()
+    
+    srcfile = srcfile + extension
+    dstfile = dstfile + extension
+
+    src = os.path.join(srcpath, srcfile)
+    dst = os.path.join(dstpath, dstfile)
 
     if os.path.exists(src):
         if os.path.exists(dst):
-            print(f"error path destination: {dstpath}{dstfile} already exists")
+            print(f"error path destination: {dst} already exists")
 
         else:
-            print(f"copying file")
-            copyfile(srcpath, dst)
+            print(f"copying file: {src} to {dst}")
+            copyfile(src, dst)
+
+    else:
+        print(f"Source path does not exist: {src}")
 
 def check_existance(filename, path = "", extension = ".sqlite"):
 
-    path = path if path != "" else get_localpath()
+    if path == "":
+        path = get_localpath()
 
     destination = os.path.join(path, filename + extension)
     if os.path.exists(destination):
-        print(f"destination: {destination} already exists")
+        # print(f"destination: {destination} already exists")
         return True
     else:
+        # print(f"destination: {destination} doesnt exist")
         return False
 
 class Database(object):
+    def __init__(self, filename, path=""):
 
-    def __init__(self, filename, path = ""):
-
-        self.connection = None
         self.filename = filename
 
         if path == "":
             path = get_localpath()
         self.path = path
+
+        self.connection = None
+        self.tables = []
         
-        print(f"{path} and {filename}")
-        try:
-            destination = os.path.join(path, f"{filename}.sqlite")
+        existance = check_existance(path=path, filename=filename)
+        self.connect_database()
 
-            # check if directory already exists, if not create it
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-            self.connection = sqlite3.connect(destination)
-            print("Connection to SQLite DB successful")
-
-        except Error as e:
-
-            print(f"The error '{e}' occurred")
+        if existance == True:
+            print(f"Database with path {path} and filename {filename} already exists, connection opened to existing database")
+            
+            # pull all sql tables and records
+            self.get_tables()
+        else:
+            print(f"Database with path {path} and filename {filename} could not be found, connection opened to new database")
 
     def delete_database(self):
 
@@ -102,7 +110,83 @@ class Database(object):
 
         print(f"Database deleted!")
 
+    def saveas_database(self, filename, path=""):
+
+        if path == "":
+            path = get_localpath()
+        self.path = path
+
+        existance = check_existance(path=path, filename=filename)
+
+        if existance == True:
+            print(f"Database with path {path} and filename {filename} already exists, connection refused!")
+            
+        else:
+            print(f"Database with path {path} and filename {filename} is free, saving database to the new file")
+
+            saveas_file(
+                srcfile = self.filename, 
+                dstfile = filename,
+                srcpath = self.path,
+                dstpath = path,
+                )
+
+            new_database = Database(
+                filename=filename, 
+                path=path,
+            )
+
+            return new_database
+
+    def connect_database(self):
+
+        try:
+            destination = os.path.join(self.path, f"{self.filename}.sqlite")
+
+            # check if directory already exists, if not create it
+            if not os.path.exists(self.path):
+                os.makedirs(self.path)
+
+            self.connection = sqlite3.connect(destination)
+            print("Connection to SQLite DB successful")
+
+        except Error as e:
+
+            print(f"The error '{e}' occurred")
+
+    def close_database(self):
+        self.connection.close()
+
+    def get_tables(self):
+        """
+        Refresh all tables
+        """
+
+        # get existing tables
+        self.tables = []
+        tablenames = self.read_table_names()
+        # print(f"getting tablenames for database {self.filename}")
+
+        for tablename in tablenames:
+            if tablename != 'sqlite_sequence':
+                tableobject = Table.open_existing_table(self, tablename)
+                self.tables += [tableobject]
+
     def execute_query(self, query):
+        cursor = self.connection.cursor()
+
+        try:
+            print(f"--------------------\n{query}\n")
+            cursor.execute(query)
+            self.connection.commit()
+            print("Success!\n--------------------")
+
+            return cursor
+
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def execute_parameterised_query(self, query, parameters):
         """
         build a parameterised query:
         for a parameter list of 3 length like below
@@ -119,20 +203,7 @@ class Database(object):
         meaning
         this replaces the "%s with our placeholders ('?, ?, ?' in our case)
         """
-        cursor = self.connection.cursor()
 
-        try:
-            print(f"--------------------\n{query}\n")
-            cursor.execute(query)
-            self.connection.commit()
-            print("Success!\n--------------------")
-
-            return cursor
-
-        except Error as e:
-            print(f"The error '{e}' occurred")
-
-    def execute_parameterised_query(self, query, parameters):
         cursor = self.connection.cursor()
 
         try:
@@ -251,21 +322,44 @@ class Database(object):
         cursor = self.execute_parameterised_query(query, parameters)
         records = self.get_records_array(cursor.fetchall())
 
+        # print(f"sqlrecords {records}")
         return records
 
-    def create_table(self, table, variables = ["integer INTEGER","text TEXT"]):
+    def create_table(self, name, record_name="", column_names = [], column_types = [], column_placement=[], defaults=[]):
         """
         collects input of table name and column information
         builds a single query and 
         forwards to execute_query
         """
-        
+
+        # add the primary key
+        column_names = ["id"] + column_names
+        column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT"] + column_types
+
+        columns = []
+        # enumerate over column names and types
+        for index, column_name in enumerate(column_names):
+            columns += [f"{column_name} {column_types[index]}"]
+
         # transform variables to string format
-        valuetext = ',\n'.join(variables)
+        valuetext = ',\n'.join(columns)
 
         # create variables text
-        query = f"CREATE TABLE IF NOT EXISTS {table} (\n{valuetext}\n);"
+        query = f"CREATE TABLE IF NOT EXISTS {name} (\n{valuetext}\n);"
         self.execute_query(query)
+
+        tableobject = Table(
+            db = self,
+            name = name,
+            record_name=record_name,
+            column_names = column_names,
+            column_types = column_types,
+            column_placement=column_placement,
+            defaults = [],
+        )
+
+        self.tables += [tableobject]
+        return tableobject
 
     def create_records(self, table, column_names, valuepairs):
         
@@ -283,8 +377,8 @@ class Database(object):
             valuepair_placeholders = '(' + ','.join('?' for value in valuepair) + '),\n'
             placeholders += valuepair_placeholders
         placeholders = placeholders[:-2]
-        print(f"placeholders = {placeholders}")
-        print(f"parameters = {parameters}")
+        # print(f"placeholders = {placeholders}")
+        # print(f"parameters = {parameters}")
 
         query = f"INSERT INTO {table}\n({column_text})\nVALUES\n{placeholders}\n;"
         self.execute_parameterised_query(query, parameters)
@@ -354,7 +448,7 @@ class Database(object):
         return value
 
 class Table(object):
-    def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = [], column_placement = []):
+    def __init__(self, db, name, column_names, column_types, column_placement = [], defaults = [], record_name = ""):
         super().__init__()
 
         # set table and record names
@@ -364,23 +458,16 @@ class Table(object):
         else:
             self.record_name = record_name
 
-        # set column names and types including the primary key and ordering column
-        self.column_names = ["id", "ordering"] + column_names
-        self.column_types = ["INTEGER PRIMARY KEY AUTOINCREMENT", "INTEGER"] + column_types
+        # set column names and types
+        self.column_names = column_names
+        self.column_types = column_types
 
         self.set_defaults(defaults)
         self.set_column_placement(column_placement)
 
         # set connection to database
         self.db = db
-
-        #### check if table exists, then only open the table, check integrity
-        # create tables in database
-        self.createTable()
-
-        # initiate records
-        if initial_records != []:
-            self.createRecords(records=initial_records)
+        self.readAllRecords()
 
     @staticmethod
     def open_existing_table(database, tablename):
@@ -391,37 +478,14 @@ class Table(object):
         column_types = metadata["column_types"]
 
         print(metadata)
-        table = Table(database, tablename, column_names[2:], column_types[2:])
+        table = Table(database, tablename, column_names, column_types)
+        table.readAllRecords()
+
         return table
-
-    def move_to_database(self, db):
-
-        # copy table records
-        tablerecords = self.readRecords()
-
-        # connect to new database
-        self.db = db
-
-        # create tables in new database
-        self.createTable()
-
-        # copy records in new database
-        tablevalues = []
-        for record in tablerecords:
-            values = []
-
-            for value in record.values:
-                values += [value]
-
-            # print(f"values {values}")
-            tablevalues += [values]
-
-        # print(f"tablevalues {tablevalues}")
-        self.createRecords(tablevalues)
 
     def set_defaults(self, defaults):
         if defaults != []:
-            self.defaults = [-1, 0] + defaults
+            self.defaults = [-1] + defaults
         else:
             self.defaults = []
 
@@ -446,8 +510,7 @@ class Table(object):
 
         if column_placement != []:
             id_placement = [0,0,1,1]
-            ordering_placement = [0,1,1,1]
-            self.column_placement = [id_placement] + [ordering_placement] + column_placement
+            self.column_placement = [id_placement] + column_placement
 
         else:
             self.column_placement = []
@@ -456,7 +519,7 @@ class Table(object):
                 indexconfig = [index,0,1,1]
                 self.column_placement += [indexconfig]
 
-            # print(f"column_placement set are {self.column_placement}")
+        print(f"column_placement set are {self.column_placement}")
 
     def readColumnCount(self, includepk=True):
         """including private key column"""
@@ -470,9 +533,33 @@ class Table(object):
         
         return self.db.get_max_row(table=self.name)
 
-    def readRecords(self, columns=[], where=[]):
+    def transform_sql_to_record(self, sqlrecords):
 
-        columns = self.column_names
+        # print(sqlrecords)
+
+        records = []
+        for record in sqlrecords:
+
+            valuearray = []
+            for value in record:
+                valuearray += [value]
+
+            recordobject = Record(self, valuearray)
+            # print(f"recordarray: {recordobject.recordarray}")
+
+            records += [recordobject]
+
+        return records
+
+    def readAllRecords(self):
+
+        sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where="")
+
+        self.records = self.transform_sql_to_record(sqlrecords)
+
+        return self.records
+
+    def readRecords(self, where=[]):
 
         # only do something with where if its given
         if where != []:
@@ -484,18 +571,10 @@ class Table(object):
                     if isinstance(statement[0], int):
                         statement[0] = self.column_names[statement[0]]
 
-        # print(f"where = {where}")
+        # print(f"function {self.readRecords.__name__}: where = {where}")
 
-        sqlrecords = self.db.read_records(table=self.name, columns=columns, where=where)
-
-        records = []
-        # print(sqlrecords)
-        for record in sqlrecords:
-            valuearray = []
-            for value in record:
-                valuearray += [value]
-            recordobject = Record(self, valuearray)
-            records += [recordobject]
+        sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where=where)
+        records = self.transform_sql_to_record(sqlrecords)
 
         return records
 
@@ -537,25 +616,31 @@ class Table(object):
 
         return sqlcolumns
 
-    def createTable(self):
-        """
-        gathers the table name and the column info and then forwards them to
-        create_table method of the Database object
-        """
-        # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
-        columns = []
+    def createTabledepreciated(self):
+        pass
 
-        # get column info without primary key
-        column_names = self.column_names
-        column_types = self.column_types
+        #     """
+        #     gathers the table name and the column info and then forwards them to
+        #     create_table method of the Database object
+        #     """
 
-        # enumerate over column names without id column
-        for index, column_name in enumerate(column_names):
-            columns.append(f"{column_name} {column_types[index]}")
-        # print(columns)
+        #     # columns = [f"id INTEGER PRIMARY KEY AUTOINCREMENT", f"ordering INTEGER"]
+        #     columns = []
 
-        # print(f"query create table {columns}")
-        self.db.create_table(table=self.name, variables=columns)
+        #     # get column info without primary key
+        #     column_names = self.column_names
+        #     column_types = self.column_types
+
+        #     # print(columns)
+
+        #     # print(f"query create table {columns}")
+        #     self.db.create_table(name=self.name, column_names=column_names, column_types=column_types)
+
+    def create_draft_record(self):
+
+        record = Record(self, self.defaults)
+
+        return record
 
     def createRecord(self, values):
         """
@@ -565,61 +650,45 @@ class Table(object):
 
         It returns the last row as a Record object
         """
+        print(f"createRecord self.column_names {self.column_names}")
+        self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=[values])
 
-        print(f"createRecord {values}")
-        # print(values)
-        maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
-        # print(maxordering)
-        valuepairs = [[maxordering] + values]
-        # print(valuepairs)
-
-        self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=valuepairs)
-        self.defaults[1] = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
+        records = self.readAllRecords()
 
         newrows_last = self.db.get_max_row(self.name)
-        print(newrows_last)
-        where = [["id",[newrows_last]]]
 
-        sqlrecords = self.db.read_records(table=self.name, where=where)
-        print(f"Record created: {sqlrecords}")
-        recordobject = Record(self, sqlrecords[0])
+        for record in records:
+            if record.primarykey == newrows_last:
+                recordobject = record
+                break
+
+        print(f"Record created: {recordobject.recordarray}")
 
         return recordobject
 
     def createRecords(self, records):
 
-        print(f"createRecords {records}")
+        # print(f"createRecords {records}")
 
         if len(records) == 1:
             records = [self.createRecord(records[0])]
             return records
 
         else:
-            # print(records)
-            maxordering = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
-            # print(maxordering)
-            for index, record in enumerate(records):
-                records[index] = [maxordering] + record
-                maxordering += 1
-            # print(records)
 
             newrows_first = self.db.get_max_row(self.name) + 1
             
             self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=records)
-            self.defaults[1] = self.db.get_max_columncontent(table=self.name, column="ordering") + 1
-            
-            newrows_last = self.db.get_max_row(self.name)
 
-            wherevalues = list(range(newrows_first, newrows_last + 1))
-            # print(f"wherevalues = {wherevalues}")
-            where = [["id",wherevalues]]
-
-            sqlrecords = self.db.read_records(table=self.name, where=where)
-            print(f"Records created: {sqlrecords}")
+            records = self.readAllRecords()
 
             recordobjects = []
-            for record in sqlrecords:
-                recordobjects += [Record(self, record)]
+            for record in records:
+                if record.primarykey >= newrows_first:
+                    recordobjects += [record]
+
+            for record in recordobjects:
+                print(f"Records created: {record.recordarray}")
 
             return recordobjects
 
@@ -633,7 +702,7 @@ class Table(object):
         # print(f"record before = {record_before}")
 
         # update the record
-        print(valuepairs)
+        # print(valuepairs)
         self.db.update_records(table=self.name, valuepairs=valuepairs, where=where)
 
         # get record after updating
@@ -733,8 +802,8 @@ class Record(object):
 
     def setrecordpairs(self):
         self.recordpairs = []
-        print(self.table.column_names)
-        print(self.recordarray)
+        # print(f"Record setting column names {self.table.column_names}")
+        # print(f"Record setting record array {self.recordarray}")
         for index, name in enumerate(self.table.column_names):
             
             recordpair = [name, self.recordarray[index]]
@@ -755,87 +824,86 @@ def print_records(records):
 
 if __name__ == "__main__":
 
-    # string = """ "I am Inevitable" said Thanos' maid."""
-    # # string.replace('"', '\\"')
-    # # string.replace("'", "\\'")
-    # print(string)
+    filename = "backup"
 
-    # l = [1,2,3]
-    # placeholder= '?' # For SQLite. See DBAPI paramstyle.
-    # placeholders= ', '.join(placeholder for _ in l)
-    # query= f'SELECT name FROM students WHERE id IN ({placeholders})'
-    # print(query)
-
-    db = Database(path="", filename="science")
+    db = Database(path="", filename=filename)
     db.delete_database()
+    print(f"deleted database {filename}")
 
-    charbl = Table(
-        db = Database(path="", filename="science"),
-        name = "scientists",
-        column_names = ["name", "age", "nobelprizewinner"],
-        column_types = ["Text", "Integer", "Bool"],
-        initial_records = [
-            ["Hawking", 68, True],
-            ["Edison's child said \"Apple!\"", 20, True],
-        ]
+    filename = "science"
+
+    db = Database(path="", filename=filename)
+    db.delete_database()
+    print(f"deleted database {filename}")
+
+    db = Database(filename=filename)
+
+    sciencetbl = db.create_table(
+        name="scientists",
+        column_names = ["ordering", "name", "age", "nobelprizewinner"],
+        column_types = ["INTEGER", "Text", "Integer", "Bool"],
     )
+    print(f"read table names: {db.read_table_names()}")
+
+    values = [
+        [1, "Hawking", 68, True],
+        [2, "Edison's child said \"Apple!\"", 20, True],
+    ]
+    records = sciencetbl.createRecords(values)
+    print(f"creating initial records")
+    print_records(records)
     
     #test functions of table
-    print(f"read table names: {charbl.db.read_table_names()}")
-    print(f"read column names: {charbl.db.read_column_names(charbl.name)}")
-    print(f"read column types: {charbl.db.read_column_types(charbl.name)}")
-    print(f"read column metadata: {charbl.db.read_column_metadata(charbl.name)}")
+    print(f"read column names: {db.read_column_names(sciencetbl.name)}")
+    print(f"read column types: {db.read_column_types(sciencetbl.name)}")
+    print(f"read column metadata: {db.read_column_metadata(sciencetbl.name)}")
 
-    values = ["Einstein", 100, False]
-    record = charbl.createRecord(values)
+    values = [3, "Einstein", 100, False]
+    record = sciencetbl.createRecord(values)
     print(f"create single record")
     print_records([record])
 
     values = [
-        ["Rosenburg", 78, False],
-        ["Neil dGrasse Tyson", 57, True],
+        [4, "Rosenburg", 78, False],
+        [5, "Neil dGrasse Tyson", 57, True],
     ]
-    records = charbl.createRecords(values)
+    records = sciencetbl.createRecords(values)
     print(f"create multiple records")
     print_records(records)
 
-    columns = ["name", "age"]
-    records = charbl.readRecords(columns=columns)
-    print(f"read only name and age columns for all records")
-    print_records(records)
-
     # columns = ["name", "age"]
-    # records = charbl.readRecords(columns=columns)
+    # records = sciencetbl.readRecords(columns=columns)
     # print(f"read only name and age columns for all records")
     # print_records(records)
 
     where = [["nobelprizewinner", [True]]]
-    records = charbl.readRecords(where=where)
+    records = sciencetbl.readRecords(where=where)
     print(f"read where")
     print_records(records)
 
     valuepairs = [["nobelprizewinner", False]]
     where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    records = charbl.updateRecords(valuepairs=valuepairs, where=where)
+    records = sciencetbl.updateRecords(valuepairs=valuepairs, where=where)
     print(f"update true to false")
     print_records(records)
 
     valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
     rowid = 5
-    record = charbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    record = sciencetbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
     print(f"update record 'id = 5'")
     print_records([record])
 
-    records = charbl.readRecords()
+    records = sciencetbl.readRecords()
     print(f"read all records")
     print_records(records)
 
-    reltbl = Table(
-        db = Database(path="", filename="science"),
+    reltbl = db.create_table(
         name = "relationships",
-        column_names = ["charid1", "charid2", "description"],
-        column_types = ["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+        column_names=["charid1", "charid2", "description"],
+        column_types=["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
     )
+
+    reltbl.db.read_column_metadata(reltbl.name)
 
     values = [1, 2, "hawking and edison"]
     record = reltbl.createRecord(values)
@@ -847,3 +915,20 @@ if __name__ == "__main__":
     print_records(records)
 
     records = reltbl.readForeignValues('charid1')
+
+    db.saveas_database(filename="backup")
+    db.close_database()
+
+    filename = "science"
+
+    db = Database(filename=filename)
+
+    teachertbl = db.create_table(
+        name="teachers",
+        column_names = ["ordering", "name", "age", "active"],
+        column_types = ["INTEGER", "Text", "Integer", "Bool"],
+    )
+
+    for table in db.tables:
+        print(f"printing for table: {table.name}")
+        print_records(table.records)
