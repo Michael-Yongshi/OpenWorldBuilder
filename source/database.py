@@ -79,7 +79,6 @@ def check_existance(filename, path = "", extension = ".sqlite"):
         return False
 
 class Database(object):
-
     def __init__(self, filename, path=""):
 
         self.filename = filename
@@ -325,7 +324,7 @@ class Database(object):
         # print(f"sqlrecords {records}")
         return records
 
-    def create_table(self, name, column_names = [], column_types = []):
+    def create_table(self, name, record_name="", column_names = [], column_types = [], column_placement=[]):
         """
         collects input of table name and column information
         builds a single query and 
@@ -351,8 +350,11 @@ class Database(object):
         tableobject = Table(
             db = self,
             name = name,
+            record_name=record_name,
             column_names = column_names,
             column_types = column_types,
+            column_placement=column_placement,
+            defaults = [],
         )
 
         self.tables += [tableobject]
@@ -445,7 +447,7 @@ class Database(object):
         return value
 
 class Table(object):
-    def __init__(self, db, name, column_names, column_types, record_name = "", defaults = [], initial_records = [], column_placement = []):
+    def __init__(self, db, name, column_names, column_types, column_placement = [], defaults = [], record_name = ""):
         super().__init__()
 
         # set table and record names
@@ -465,13 +467,6 @@ class Table(object):
         # set connection to database
         self.db = db
         self.readAllRecords()
-
-        # create tables in database
-        # self.createTable()
-
-        # initiate records
-        # if initial_records != []:
-        #     self.createRecords(records=initial_records)
 
     @staticmethod
     def open_existing_table(database, tablename):
