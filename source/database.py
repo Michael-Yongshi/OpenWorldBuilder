@@ -322,6 +322,7 @@ class Database(object):
         cursor = self.execute_parameterised_query(query, parameters)
         records = self.get_records_array(cursor.fetchall())
 
+        print(f"sqlrecords {records}")
         return records
 
     def create_table(self, name, column_names = [], column_types = []):
@@ -450,7 +451,7 @@ class Table(object):
         else:
             self.record_name = record_name
 
-        # set column names and types including the primary key and ordering column
+        # set column names and types
         self.column_names = column_names
         self.column_types = column_types
 
@@ -477,7 +478,7 @@ class Table(object):
         column_types = metadata["column_types"]
 
         print(metadata)
-        table = Table(database, tablename, column_names[2:], column_types[2:])
+        table = Table(database, tablename, column_names, column_types)
         return table
 
     def set_defaults(self, defaults):
@@ -542,6 +543,8 @@ class Table(object):
             for value in record:
                 valuearray += [value]
             recordobject = Record(self, valuearray)
+            print(f"valuearray: {valuearray}")
+            print(f"recordarray: {recordobject.recordarray}")
             self.records += [recordobject]
 
         return self.records
@@ -918,7 +921,6 @@ if __name__ == "__main__":
     filename = "science"
 
     db = Database(filename=filename)
-    print(f"read table names: {db.read_table_names()}")
 
     teachertbl = db.create_table(
         name="teachers",
