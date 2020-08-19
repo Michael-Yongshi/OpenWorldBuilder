@@ -35,10 +35,10 @@ def get_normal_tables(db):
         column_types = ["INTEGER", "VARCHAR(255)", "VARCHAR(255)", "TEXT"],
         column_placement = [
             # row, column, height, width
-            # id by default is [0,0,1,1] and ordering [0,1,1,1]
-            [1,0,1,2],
-            [2,0,1,2],
-            [3,0,10,2],
+            [1,0,1,1],
+            [2,0,1,1],
+            [3,0,1,1],
+            [4,0,10,1],
         ],
     )
 
@@ -71,7 +71,7 @@ def get_normal_tables(db):
         column_types = ["INTEGER", "VARCHAR(255)", "INTEGER", "INTEGER REFERENCES FIXEDPARENT_genders(id)", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES cultures(id)", "INTEGER REFERENCES races(id)", "TEXT"],
     )
 
-def get_parent_tables(filename):
+def get_parent_tables(db):
     """
     TL;DR: Parent tables: one-to-many
 
@@ -147,7 +147,7 @@ def get_parent_tables(filename):
 
     return tables
 
-def get_fixed_parent_tables(filename):
+def get_fixed_parent_tables(db):
     """
     TL;DR: Parent tables: one-to-many fixed parent table
 
@@ -159,18 +159,20 @@ def get_fixed_parent_tables(filename):
     """
 
     # # not shown fixed parent tables
-    db.create_table(
+    gendertbl = db.create_table(
         name = "FIXEDPARENT_genders",
         column_names = ["name", "description"],
         column_types = ["VARCHAR(255)", "TEXT"],
-        initial_records= [
+    )
+    gendertbl.createRecords(
+        records = [
             ["Undetermined", "Undetermined"],
             ["Male", "Male"],
-            ["Female", "Female"]
+            ["Female", "Female"],
         ]
     )
 
-def get_versionized_tables(filename):
+def get_versionized_tables(db):
     """
     TL;DR: Parent tables: many-to-many on a certain condition
 
@@ -201,7 +203,7 @@ def get_versionized_tables(filename):
         column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES empires(id)", "INTEGER REFERENCES countries(id)", "TEXT"],
     )
 
-def get_xreference_tables(filename):
+def get_xreference_tables(db):
     """
     TL;DR: child to child: many-to-many
 
