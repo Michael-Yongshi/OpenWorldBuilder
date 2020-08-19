@@ -168,8 +168,9 @@ class Database(object):
         # print(f"getting tablenames for database {self.filename}")
 
         for tablename in tablenames:
-            tableobject = Table.open_existing_table(self, tablename)
-            self.tables += [tableobject]
+            if tablename != 'sqlite_sequence':
+                tableobject = Table.open_existing_table(self, tablename)
+                self.tables += [tableobject]
 
     def execute_query(self, query):
         cursor = self.connection.cursor()
@@ -324,7 +325,7 @@ class Database(object):
         # print(f"sqlrecords {records}")
         return records
 
-    def create_table(self, name, record_name="", column_names = [], column_types = [], column_placement=[]):
+    def create_table(self, name, record_name="", column_names = [], column_types = [], column_placement=[], defaults=[]):
         """
         collects input of table name and column information
         builds a single query and 
@@ -484,7 +485,7 @@ class Table(object):
 
     def set_defaults(self, defaults):
         if defaults != []:
-            self.defaults = [-1, 0] + defaults
+            self.defaults = [-1] + defaults
         else:
             self.defaults = []
 
@@ -509,8 +510,7 @@ class Table(object):
 
         if column_placement != []:
             id_placement = [0,0,1,1]
-            ordering_placement = [0,1,1,1]
-            self.column_placement = [id_placement] + [ordering_placement] + column_placement
+            self.column_placement = [id_placement] + column_placement
 
         else:
             self.column_placement = []
@@ -519,7 +519,7 @@ class Table(object):
                 indexconfig = [index,0,1,1]
                 self.column_placement += [indexconfig]
 
-            # print(f"column_placement set are {self.column_placement}")
+        print(f"column_placement set are {self.column_placement}")
 
     def readColumnCount(self, includepk=True):
         """including private key column"""
@@ -635,6 +635,12 @@ class Table(object):
 
         #     # print(f"query create table {columns}")
         #     self.db.create_table(name=self.name, column_names=column_names, column_types=column_types)
+
+    def create_draft_record(self):
+
+        record = Record(self, self.defaults)
+
+        return record
 
     def createRecord(self, values):
         """
