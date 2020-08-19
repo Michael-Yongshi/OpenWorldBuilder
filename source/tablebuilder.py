@@ -2,22 +2,23 @@ import datetime
 
 from source.database import Database, Table
 
-def table_builder(filename):
+def create_database(filename, path):
 
-    tables = []
-    tables += get_normal_tables(filename)
-    print(tables)
-    tables += get_parent_tables(filename)
-    print(tables)
-    tables += get_fixed_parent_tables(filename)
-    print(tables)
-    tables += get_xreference_tables(filename)
-    print(tables)
-    tables += get_versionized_tables(filename)
+    db = Database(
+        filename = filename,
+        path = path,
+    )
 
-    return tables
+    get_normal_tables(db)
+    get_parent_tables(db)
+    get_fixed_parent_tables(db)
+    get_versionized_tables(db)
+    get_xreference_tables(db)
+    print(f"Tables added to database: {db.read_table_names()}")
 
-def get_normal_tables(filename):
+    return db
+
+def get_normal_tables(db):
     """
     TL;DR: child tables with the actual records / data
 
@@ -26,15 +27,12 @@ def get_normal_tables(filename):
     i.e. create new characters, locations, events or story parts.
     """
 
-    tables = []
-
     # Story
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "stories",
         record_name = "story",
-        column_names = ["name", "summary", "body"],
-        column_types = ["VARCHAR(255)", "VARCHAR(255)", "TEXT"],
+        column_names = ["ordering", "name", "summary", "body"],
+        column_types = ["INTEGER", "VARCHAR(255)", "VARCHAR(255)", "TEXT"],
         column_placement = [
             # row, column, height, width
             # id by default is [0,0,1,1] and ordering [0,1,1,1]
@@ -42,44 +40,36 @@ def get_normal_tables(filename):
             [2,0,1,2],
             [3,0,10,2],
         ],
-    ))
+    )
 
     # Events
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "events",
-        column_names = ["name", "date", "formatdate", "begin", "end", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER", "VARCHAR(255)", "BOOL", "BOOL", "TEXT"],
+        column_names = ["ordering", "name", "date", "formatdate", "begin", "end", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "INTEGER", "VARCHAR(255)", "BOOL", "BOOL", "TEXT"],
         defaults = ["", 0, "", True, True, ""],
-    ))
+    )
 
     # Timelines
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "timelines",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
     
     # Locations
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "locations",
-        column_names = ["name", "province_id", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER REFERENCES provinces(id)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "province_id", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "INTEGER REFERENCES provinces(id)", "TEXT"],
+    )
 
     # Characters
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "characters",
-        column_names = ["name", "age", "gender", "nationality", "culture", "race", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER", "INTEGER REFERENCES FIXEDPARENT_genders(id)", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES cultures(id)", "INTEGER REFERENCES races(id)", "TEXT"],
-    ))
-
-    print(tables)
-
-    return tables
+        column_names = ["ordering", "name", "age", "gender", "nationality", "culture", "race", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "INTEGER", "INTEGER REFERENCES FIXEDPARENT_genders(id)", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES cultures(id)", "INTEGER REFERENCES races(id)", "TEXT"],
+    )
 
 def get_parent_tables(filename):
     """
@@ -98,72 +88,62 @@ def get_parent_tables(filename):
 
     # # shown parent tables
     # Cultures
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "cultures",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Races
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "races",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Provinces
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "provinces",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Countries (versionized)
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "countries",
         record_name = "Country",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Empires (versionized)
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "empires",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Magic
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "magics",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Tech
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "technologies",
         record_name= "technology",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
-    ))
+        column_names = ["ordering", "name", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    )
 
     # Research
-
-
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "research",
-        column_names = ["name", "description", "source"],
-        column_types = ["VARCHAR(255)", "TEXT", "VARCHAR(255)"],
-    ))
+        column_names = ["ordering", "name", "description", "source"],
+        column_types = ["INTEGER", "VARCHAR(255)", "TEXT", "VARCHAR(255)"],
+    )
 
     return tables
 
@@ -178,11 +158,8 @@ def get_fixed_parent_tables(filename):
     i.e. the values of genders, which are usually two and normally do not have to be changed.
     """
 
-    tables = []
-
     # # not shown fixed parent tables
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "FIXEDPARENT_genders",
         column_names = ["name", "description"],
         column_types = ["VARCHAR(255)", "TEXT"],
@@ -191,9 +168,7 @@ def get_fixed_parent_tables(filename):
             ["Male", "Male"],
             ["Female", "Female"]
         ]
-    ))
-
-    return tables
+    )
 
 def get_versionized_tables(filename):
     """
@@ -214,23 +189,17 @@ def get_versionized_tables(filename):
     a character can only be in one place at a time, but over time this changes, making this a versionized many-to-many relationship on condition of time
     """
 
-    tables = []
-
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "XREF_countries_provinces",
         column_names = ["name", "startversion", "endversion", "country_id", "province_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES provinces(id)", "TEXT"],
-    ))
+    )
 
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "XREF_empires_countries",
         column_names = ["name", "startversion", "endversion", "empire_id", "country_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES empires(id)", "INTEGER REFERENCES countries(id)", "TEXT"],
-    ))
-
-    return tables
+    )
 
 def get_xreference_tables(filename):
     """
@@ -243,31 +212,22 @@ def get_xreference_tables(filename):
     we record every time a character plays in an event, creating a list of these occurences
     """
 
-    tables = []
-
     # Stories to characters
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "XREF_stories_characters",
         column_names = ["name", "story_id", "character_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER REFERENCES stories(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
-    ))
+    )
 
-    tables.append(Table(
-        db = Database(filename=filename),
+    db.create_table(
         name = "XREF_relationships",
-
         column_names = ["name", "character1_id", "character2_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
-    ))
-
-    return tables
-
+    )
 
 # # Template
-# tables.append(Table(
-#     db = Database(filename=filename),
+# db.create_table(
 #     name = "",
 #     column_names = ["", ""],
 #     column_types = ["", ""],
-# ))
+# )
