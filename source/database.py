@@ -40,31 +40,42 @@ def show_files(path = ""):
 
     return path, filelist
 
-def saveas_file(srcfile, dstfile, srcpath = "", dstpath = ""):
+def saveas_file(srcfile, dstfile, srcpath = "", dstpath = "", extension = ".sqlite"):
 
-    srcpath = srcpath if srcpath != "" else get_localpath()
-    dstpath = dstpath if dstpath != "" else get_localpath()
+    if srcpath == "":
+        srcpath = get_localpath()
     
-    src = os.path.join(srcpath, srcfile + ".sqlite")
-    dst = os.path.join(dstpath, dstfile + ".sqlite")
+    if dstpath == "":
+        dstpath = get_localpath()
+    
+    srcfile = srcfile + extension
+    dstfile = dstfile + extension
+
+    src = os.path.join(srcpath, srcfile)
+    dst = os.path.join(dstpath, dstfile)
 
     if os.path.exists(src):
         if os.path.exists(dst):
-            print(f"error path destination: {dstpath}{dstfile} already exists")
+            print(f"error path destination: {dst} already exists")
 
         else:
-            print(f"copying file")
-            copyfile(srcpath, dst)
+            print(f"copying file: {src} to {dst}")
+            copyfile(src, dst)
+
+    else:
+        print(f"Source path does not exist: {src}")
 
 def check_existance(filename, path = "", extension = ".sqlite"):
 
-    path = path if path != "" else get_localpath()
+    if path == "":
+        path = get_localpath()
 
     destination = os.path.join(path, filename + extension)
     if os.path.exists(destination):
-        print(f"destination: {destination} already exists")
+        # print(f"destination: {destination} already exists")
         return True
     else:
+        # print(f"destination: {destination} doesnt exist")
         return False
 
 class Database(object):
@@ -112,7 +123,7 @@ class Database(object):
             print(f"Database with path {path} and filename {filename} already exists, connection refused!")
             
         else:
-            print(f"Database with path {path} and filename {filename} could not be found, saving database to new file")
+            print(f"Database with path {path} and filename {filename} is free, saving database to the new file")
 
             saveas_file(
                 srcfile = self.filename, 
