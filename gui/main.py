@@ -44,6 +44,7 @@ from guidarktheme.decorators import Decorators
 
 from gui.widgets import (
     RecordLayout,
+    RecordTableDialog,
 )
 
 from source.tablebuilder import create_database
@@ -87,6 +88,7 @@ class WorldOverview(QMainWindow):
         self.table_selected = None # Table object
         self.table_records = [] # list of records from table_selected
         self.record_selected = None
+        self.record_array = []
 
         # set menu bar
         self.set_menu_bar()
@@ -98,7 +100,6 @@ class WorldOverview(QMainWindow):
         bar = self.menuBar()
 
         filemenu = bar.addMenu("File")
-
         buttons = [
             {
                 "name": "New",
@@ -137,14 +138,59 @@ class WorldOverview(QMainWindow):
                 "connect": self.close
             },
         ]
-
         for button in buttons:
-
             btn = QAction(button["name"], self)
             btn.setShortcut(button["shortcut"])
             btn.setStatusTip(button["tooltip"])
             btn.triggered.connect(button["connect"])
             filemenu.addAction(btn)
+
+        tablemenu = bar.addMenu("Table")
+        buttons = [
+            {
+                "name": "New",
+                "shortcut": "Ctrl+N",
+                "tooltip": "Create new world",
+                "connect": self.new_table
+
+            },
+            # {
+            #     "name": "Open",
+            #     "shortcut": "Ctrl+O",
+            #     "tooltip": "Open existing world",
+            #     "connect": self.open_database
+            # },
+            # {
+            #     "name": "Save",
+            #     "shortcut": "Ctrl+S",
+            #     "tooltip": "Save current world",
+            #     "connect": self.save_database
+            # },
+            # {
+            #     "name": "SaveAs",
+            #     "shortcut": "",
+            #     "tooltip": "Save current world as ...",
+            #     "connect": self.saveas_database
+            # },
+            # {
+            #     "name": "Close",
+            #     "shortcut": "",
+            #     "tooltip": "Close current world",
+            #     "connect": self.close_database
+            # },
+            {
+                "name": "Delete",
+                "shortcut": "Ctrl+Q",
+                "tooltip": "Quit application",
+                "connect": self.delete_table
+            },
+        ]
+        for button in buttons:
+            btn = QAction(button["name"], self)
+            btn.setShortcut(button["shortcut"])
+            btn.setStatusTip(button["tooltip"])
+            btn.triggered.connect(button["connect"])
+            tablemenu.addAction(btn)
 
     def initUI(self):     
         
@@ -190,8 +236,8 @@ class WorldOverview(QMainWindow):
         # print(f"table records {self.table_records}")
         if self.table_records != []:
             for record in self.table_records:
-                print(record.values)
-                name = record.values[1] # take name as first value after primary key
+                # print(record.values)
+                name = record.name # take name as first value after primary key
                 listwidgetitem = QListWidgetItem(f"{name}")
                 listwidgetitem.setData(1, record)
                 listwidget.addItem(listwidgetitem)
@@ -207,7 +253,7 @@ class WorldOverview(QMainWindow):
 
             newbtn = QPushButton()
             newbtn.setText("+")
-            newbtn.clicked.connect(self.closure_set_new_record_selection(table))
+            newbtn.clicked.connect(self.closure_draft_record(table))
             box.addWidget(newbtn, 1)
 
             frame = QBorderlessFrame()
@@ -219,6 +265,11 @@ class WorldOverview(QMainWindow):
 
         if self.table_selected == None:
             navbox.addWidget(listwidget)
+
+        btntblnew = QPushButton()
+        btntblnew.setText("New Table")
+        btntblnew.clicked.connect(self.new_table)
+        navbox.addWidget(btntblnew)
 
         navboxframe = QRaisedFrame()
         navboxframe.setLayout(navbox)
@@ -234,7 +285,7 @@ class WorldOverview(QMainWindow):
 
         # we will create a gridlayout of the selected record with all the widgets and a seperate array with the widgets in order to manipulate them and pull values
         if self.record_selected != None:
-            self.record_layout = RecordLayout(self.record_selected, self.database.tables)
+            self.record_layout = RecordLayout(self.record_selected, self.database)
         else:
             self.record_layout = QGridLayout()
         record_frame = QRaisedFrame()
@@ -245,11 +296,17 @@ class WorldOverview(QMainWindow):
         buttonbox = QHBoxLayout()
         
         if self.table_selected != None:
+            
             if self.record_selected == None:
                 newbtn = QPushButton()
                 newbtn.setText("New Record")
-                newbtn.clicked.connect(self.closure_set_new_record_selection(self.table_selected))
+                newbtn.clicked.connect(self.draft_record)
                 buttonbox.addWidget(newbtn, 1)
+
+                delbtn = QPushButton()
+                delbtn.setText("Delete Record")
+                delbtn.clicked.connect(self.delete_record)
+                buttonbox.addWidget(delbtn, 1)
 
             elif self.record_selected != None:
                 if self.record_selected.primarykey == -1:
@@ -368,6 +425,41 @@ class WorldOverview(QMainWindow):
             self.table_records = self.table_selected.readRecords()
             # print(self.table_records)
     
+    def new_table(self):
+
+        # what kind of table
+        rtable = "Record table"
+        ptable = "Parent table"
+        fptable = "Fixed parent table"
+        crtable = "Cross reference table"
+        vtable = "Versionized table"
+        tabletypes = [rtable, ptable, fptable, crtable, vtable]
+
+        description = """
+        What kind of table do you want to add?\n\n
+        -- Record table: a table to input new records.\n
+        -- Parent table: a table containing groups or collections.\n
+        -- Fixed parent table: a fixed parent table, not shown in table list.\n
+        -- Versionized table: a conditional parent table, if groups or collections are only valid at some point.\n
+        -- Cross reference table: a table linking normal tables together, not shown in table list.
+        """
+
+        tabletype, okPressed = QInputDialog.getItem(self, "Type of table", description, tabletypes)
+
+        if tabletype and okPressed:
+            if tabletype == rtable:
+                print(f"Create {tabletype}")
+                dialog = RecordTableDialog(self)
+
+
+            if dialog.exec():
+                self.table_selected = dialog.createTable()
+                self.initUI()
+                QMessageBox.information(self, "Success", f"Created net table with name {self.table_selected.name}", QMessageBox.Ok)
+
+        else:
+             print("Canceled creation of table")
+
     def closure_nav_selection(self, selected):
         
         def nav_selection():
@@ -380,24 +472,27 @@ class WorldOverview(QMainWindow):
 
     def set_record_from_widget_item(self, widgetitem):
 
-        record = widgetitem.data(1)
-        self.set_record_selection(record=record)
+        self.record_selected = widgetitem.data(1)
+        self.initUI()
 
-    def set_record_selection(self, record):
-        # merge with previous method?
+    def set_record(self, record):
+
         self.record_selected = record
         self.initUI()
 
-    def closure_set_new_record_selection(self, selected):
+    def closure_draft_record(self, table):
+        
+        def draft_record():
 
-        def set_new_record_selection():
-                
-            self.table_selected = selected
-            self.record_selected = self.table_selected.create_draft_record()
+            self.table_selected = table
+            self.draft_record()
 
-            self.initUI()
+        return draft_record
 
-        return set_new_record_selection
+    def draft_record(self):
+
+        self.record_selected = self.table_selected.create_draft_record()
+        self.initUI()
 
     def create_record(self):
 
@@ -410,7 +505,7 @@ class WorldOverview(QMainWindow):
         # print(f"record {newrecord.recordarray}")
 
         # set the selected record to the new record
-        self.set_record_selection(record)
+        self.set_record(record)
 
         self.initUI()
 
@@ -422,12 +517,23 @@ class WorldOverview(QMainWindow):
         # update the record in database and retrieve the updated record from database
         record = self.table_selected.updateRecordbyID(rowid=updaterecord.primarykey, valuepairs=updaterecord.valuepairs)
 
-        self.set_record_selection(record)
+        self.set_record(record)
         self.initUI()
 
     def delete_record(self):
 
-        pass
+        self.table_selected.deleteRecords([self.record_selected])
+        self.record_selected = None
+        self.initUI()
+
+    def delete_table(self):
+
+        if self.table_selected != None:
+            self.database.delete_table(self.table_selected)
+            self.clean_variables()
+            self.initUI()
+        else:
+            messagebox = QMessageBox.warning(self, "Error", "No table selected. \nPlease select a table first.")
 
 def run():
     global app
