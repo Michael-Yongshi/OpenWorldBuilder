@@ -157,6 +157,30 @@ class Database(object):
     def close_database(self):
         self.connection.close()
 
+    def delete_table(self, table):
+
+        query = f"DROP TABLE {table.name}"
+        self.execute_query(query)
+
+        index = self.tables.index(table)
+        self.tables.pop(index)
+
+        print(f"table {table.name} deleted and removed from table list!")
+
+    def delete_records(self, table, records):
+        
+        parameters = []
+        for record in records:
+            parameters += [record.primarykey]
+
+        placeholders = ', '.join('?' for _ in parameters)
+
+        query = f"DELETE FROM {table.name} WHERE id IN ({placeholders})"
+
+        self.execute_parameterised_query(query, parameters)
+
+        table.readAllRecords()
+
     def get_tables(self):
         """
         Refresh all tables
@@ -171,6 +195,15 @@ class Database(object):
             if tablename != 'sqlite_sequence':
                 tableobject = Table.open_existing_table(self, tablename)
                 self.tables += [tableobject]
+
+    def get_table(self, tablename):
+
+        for table in self.tables:
+            if table.name == tablename:
+                retrieved_table = table
+                break
+
+        return retrieved_table
 
     def execute_query(self, query):
         cursor = self.connection.cursor()
@@ -238,7 +271,7 @@ class Database(object):
         
         cursor = self.execute_query(query=query)
         description = cursor.description
-        print(description)
+        # print(description)
         
         # print(description)
         columns = []
@@ -477,7 +510,7 @@ class Table(object):
         column_names = metadata["column_names"]
         column_types = metadata["column_types"]
 
-        print(metadata)
+        # print(metadata)
         table = Table(database, tablename, column_names, column_types)
         table.readAllRecords()
 
@@ -519,7 +552,7 @@ class Table(object):
                 indexconfig = [index,0,1,1]
                 self.column_placement += [indexconfig]
 
-        print(f"column_placement set are {self.column_placement}")
+        # print(f"column_placement set are {self.column_placement}")
 
     def readColumnCount(self, includepk=True):
         """including private key column"""
@@ -556,6 +589,7 @@ class Table(object):
         sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where="")
 
         self.records = self.transform_sql_to_record(sqlrecords)
+        print(f"{self.name} records retrieved: {self.records}")
 
         return self.records
 
@@ -650,7 +684,7 @@ class Table(object):
 
         It returns the last row as a Record object
         """
-        print(f"createRecord self.column_names {self.column_names}")
+        # print(f"createRecord self.column_names {self.column_names}")
         self.db.create_records(table=self.name, column_names=self.column_names[1:], valuepairs=[values])
 
         records = self.readAllRecords()
@@ -662,7 +696,7 @@ class Table(object):
                 recordobject = record
                 break
 
-        print(f"Record created: {recordobject.recordarray}")
+        # print(f"Record created: {recordobject.recordarray}")
 
         return recordobject
 
@@ -688,9 +722,14 @@ class Table(object):
                     recordobjects += [record]
 
             for record in recordobjects:
-                print(f"Records created: {record.recordarray}")
+                # print(f"Records created: {record.recordarray}")
+                pass
 
             return recordobjects
+
+    def deleteRecords(self, records):
+
+        self.db.delete_records(self, records)
 
     def updateRecordbyID(self, rowid, valuepairs):
 
@@ -715,7 +754,8 @@ class Table(object):
 
         record_object = record_after
         if record_before.values != record_after.values:
-            print(f"updated record {record_object.recordarray}")
+            # print(f"updated record {record_object.recordarray}")
+            pass
         else:
             print(f"update record was not necessary")
 
@@ -754,7 +794,8 @@ class Table(object):
             if table_before[index].values != record.values:
                 record_objects += [table_after[index]]
                 for row in record_objects:
-                    print(f"updated row {row.recordarray}")
+                    # print(f"updated row {row.recordarray}")
+                    pass
                 return record_objects
 
     # def transform_boolean(self, value):
@@ -794,6 +835,7 @@ class Record(object):
 
         self.table = table
         self.primarykey = recordarray[0]
+        self.name = ""
 
         self.recordarray = recordarray
         self.values = recordarray[1:]
@@ -808,6 +850,9 @@ class Record(object):
             
             recordpair = [name, self.recordarray[index]]
             self.recordpairs += [recordpair]
+
+            if name == "name":
+                self.name = self.recordarray[index]
         # print(f"set recordpairs {self.recordpairs}")
 
     def setvaluepairs(self):
@@ -928,6 +973,15 @@ if __name__ == "__main__":
         column_names = ["ordering", "name", "age", "active"],
         column_types = ["INTEGER", "Text", "Integer", "Bool"],
     )
+
+    db.delete_table(teachertbl)
+
+    sciencetbl = db.get_table("scientists")
+
+    where = [["nobelprizewinner", [True]]]
+    records = sciencetbl.readRecords(where=where)
+
+    sciencetbl.deleteRecords(records)
 
     for table in db.tables:
         print(f"printing for table: {table.name}")
