@@ -508,7 +508,7 @@ class Table(object):
         metadata = database.read_column_metadata(tablename)
         column_order = metadata["column_order"]
         column_names = metadata["column_names"]
-        column_types = metadata["column_types"]
+        column_types = database.read_column_types(tablename)
 
         # print(metadata)
         table = Table(database, tablename, column_names, column_types)
