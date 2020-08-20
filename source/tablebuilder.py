@@ -192,13 +192,13 @@ def get_versionized_tables(db):
     """
 
     db.create_table(
-        name = "XREF_countries_provinces",
+        name = "VERSION_countries_provinces",
         column_names = ["name", "startversion", "endversion", "country_id", "province_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES provinces(id)", "TEXT"],
     )
 
     db.create_table(
-        name = "XREF_empires_countries",
+        name = "VERSION_empires_countries",
         column_names = ["name", "startversion", "endversion", "empire_id", "country_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES empires(id)", "INTEGER REFERENCES countries(id)", "TEXT"],
     )
@@ -216,13 +216,13 @@ def get_xreference_tables(db):
 
     # Stories to characters
     db.create_table(
-        name = "XREF_stories_characters",
+        name = "CROSSREF_stories_characters",
         column_names = ["name", "story_id", "character_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER REFERENCES stories(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
     )
 
     db.create_table(
-        name = "XREF_relationships",
+        name = "CROSSREF_relationships",
         column_names = ["name", "character1_id", "character2_id", "description"],
         column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
     )
