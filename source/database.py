@@ -589,7 +589,7 @@ class Table(object):
         sqlrecords = self.db.read_records(table=self.name, columns=self.column_names, where="")
 
         self.records = self.transform_sql_to_record(sqlrecords)
-        print(f"{self.name} records retrieved: {self.records}")
+        # print(f"{self.name} records retrieved: {self.records}")
 
         return self.records
 
