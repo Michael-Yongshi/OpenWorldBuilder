@@ -50,7 +50,7 @@ from source.database import (
 )
 
 class RecordLayout(QGridLayout):
-    def __init__(self, record, tables):
+    def __init__(self, record, database):
         super().__init__()
 
         """
@@ -58,7 +58,7 @@ class RecordLayout(QGridLayout):
         keeps track of the widgets for easy manipulation
         """
 
-        self.tables = tables
+        self.database = database
         self.record = record
         self.widgets = []
         self.build_layout()
@@ -68,7 +68,6 @@ class RecordLayout(QGridLayout):
         self.build_detailbox()
         self.build_childrenbox()
         self.build_xrefbox()
-
 
     def build_detailbox(self):
 
@@ -201,7 +200,7 @@ class RecordLayout(QGridLayout):
         """
         box = QVBoxLayout()
 
-        for table in self.tables:
+        for table in self.database.tables:
             reference_text = f"{self.record.table.name}(id)"
             for ctype in table.column_types:
                 ctypesplit = ctype.split("_", 3)
@@ -299,3 +298,63 @@ class RecordLayout(QGridLayout):
         string.replace("'", "\\'")
 
         return string
+
+class RecordTableDialog(QDialog):
+    def __init__(self, mainwindow):
+        super().__init__()
+
+        self.mainwindow = mainwindow
+        self.setWindowTitle("Create a new Record table")
+
+        self.name = QLineEdit(self)
+        self.name.setText("Arcs")
+        self.name.setToolTip("Insert a table name, no spaces")
+
+        self.recordname = QLineEdit(self)
+        self.recordname.setText("Arc")
+        self.recordname.setToolTip("""
+        Insert a record name. If left empty the record will have the table name minus the last letter (assuming table names are multiples of the records they represent
+        """)
+
+        self.column_names = QLineEdit(self)
+        self.column_names.setText("ordering, name, characterid, description")
+        self.column_names.setToolTip("Input column names as a list of strings: 'col1, col2, col3, col4'.")
+
+        self.column_types = QLineEdit(self)
+        self.column_types.setText("INTEGER, VARCHAR(255), INTEGER REFERENCES characters(id), TEXT")
+        self.column_types.setToolTip("Input column types as a list of strings: 'INTEGER, VARCHAR(255), TEXT, BOOL'.\nEnter a foreign key by using 'REFERENCES <table>(<column>)'")
+
+        self.column_placement = QLineEdit(self)
+        self.column_placement.setDisabled(True)
+        self.column_placement.setToolTip("Not implemented: row, column, height, widt: [[1,0,1,1], [2,0,1,1], [3,0,1,1], [4,0,10,1]].")
+
+        self.defaults = QLineEdit(self)
+        self.defaults.setToolTip("""Insert default values: '0, "", "", True'.""")
+
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+
+        layout = QFormLayout(self)
+        layout.addRow("Table name", self.name)
+        layout.addRow("Record name", self.recordname)
+        layout.addRow("Column names", self.column_names)
+        layout.addRow("Column types", self.column_types)
+        layout.addRow("Column Placements", self.column_placement)
+        layout.addRow("Default values", self.defaults)
+
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def createTable(self):
+
+        table = self.mainwindow.database.create_table(
+            name = self.name.text(),
+            record_name = self.recordname.text(),
+            column_names = self.column_names.text().split(', '),
+            column_types = self.column_types.text().split(', '),
+            column_placement = self.column_placement.text().split(', '),
+            defaults = self.defaults.text().split(', '),
+            )
+
+        return table
