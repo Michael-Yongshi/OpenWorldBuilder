@@ -86,37 +86,33 @@ class RecordLayout(QGridLayout):
 
             # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
             fkfound = False
-            split = columntype.split(' ', 3)
-            # print(f"split {split}")
-            if len(split) == 3:
-                cname = self.record.table.column_names[index]
-                creferences = split[1]
-                cforeign = split[2]
-                
-                if creferences.upper() == "REFERENCES":
-                    fkfound = True
+            print(f"columntype.upper = {columntype.upper()}")
+            if "REFERENCES" in columntype.upper():
+                fkfound = True
 
-                    widget_value = QComboBox()
-                    foreign_valuepairs = self.record.table.readForeignValues(column=cname)
+                widget_value = QComboBox()
 
-                    zero_valuepair = [0, f"No {table.column_names[index]}"]
-                    valuepairs = [zero_valuepair] + foreign_valuepairs
-                    print(f"valuepairs including no choice {valuepairs}")
+                columnname = table.column_names[index]
+                foreign_valuepairs = self.record.table.readForeignValues(column=columnname)
 
-                    for indexvp, valuepair in enumerate(valuepairs):
-                        print(f"indexvp {indexvp}, valuepair {valuepair}")
-                        foreign_id = valuepair[0]
-                        foreign_name = valuepair[1]
-                        widget_value.addItem(foreign_name, foreign_id)
-                        widget_tooltip = f"tooltip {foreign_name}"
-                        widget_value.setItemData(indexvp, widget_tooltip, Qt.ToolTipRole)
-                        print(f"added {foreign_name} with {foreign_id}")
+                zero_valuepair = [0, f"No {table.column_names[index]}"]
+                valuepairs = [zero_valuepair] + foreign_valuepairs
+                # print(f"valuepairs including no choice {valuepairs}")
 
-                        if recordarray[index] == foreign_id:
-                            # setting the default value and the tooltip for the combobox itself
-                            print(f"record shows value {recordarray[index]}")
-                            widget_value.setCurrentIndex(indexvp)
-                            widget_value.setToolTip(widget_tooltip)
+                for indexvp, valuepair in enumerate(valuepairs):
+                    # print(f"indexvp {indexvp}, valuepair {valuepair}")
+                    foreign_id = valuepair[0]
+                    foreign_name = valuepair[1]
+                    widget_value.addItem(foreign_name, foreign_id)
+                    widget_tooltip = f"tooltip {foreign_name}"
+                    widget_value.setItemData(indexvp, widget_tooltip, Qt.ToolTipRole)
+                    # print(f"added {foreign_name} with {foreign_id}")
+
+                    if recordarray[index] == foreign_id:
+                        # setting the default value and the tooltip for the combobox itself
+                        # print(f"record shows value {recordarray[index]}")
+                        widget_value.setCurrentIndex(indexvp)
+                        widget_value.setToolTip(widget_tooltip)
 
             # if fkfound is true then it was a foreign key and the widget is already made
             if fkfound == False:
