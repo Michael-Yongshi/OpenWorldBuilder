@@ -1,0 +1,3 @@
+[submodule "donjon"]
+	path = lib/donjon
+	url = https://github.com/krmaxwell/donjon
