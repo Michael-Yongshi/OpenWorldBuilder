@@ -313,12 +313,22 @@ class RecordTableDialog(QDialog):
         """)
 
         self.column_names = QLineEdit(self)
-        self.column_names.setText("ordering, name, characterid, description")
+        self.column_names.setText("ordering, name, description, active, characterid")
         self.column_names.setToolTip("Input column names as a list of strings: 'col1, col2, col3, col4'.")
 
         self.column_types = QLineEdit(self)
-        self.column_types.setText("INTEGER, VARCHAR(255), INTEGER REFERENCES characters(id), TEXT")
-        self.column_types.setToolTip("Input column types as a list of strings: 'INTEGER, VARCHAR(255), TEXT, BOOL'.\nEnter a foreign key by using 'REFERENCES <table>(<column>)'")
+        self.column_types.setText("INTEGER, VARCHAR(255), TEXT, BOOL, INTEGER REFERENCES characters(id)")
+        self.column_types.setToolTip("""
+        Input column types as a list of strings:\n
+        'INTEGER': contains a number\n
+        'VARCHAR(255)': contains a single line of text\n
+        'TEXT': contains large amount of text\n
+        'BOOL': contains true / false\n
+        \n
+        'INTEGER REFERENCES <table>(id)': by filling in a table this column is linked to a parent table for their values\n
+        i.e. "INTEGER REFERENCES characters(id)" links this column to the characters table\n
+        and one can choose from a list of characters when creating a record.
+        """)
 
         self.column_placement = QLineEdit(self)
         self.column_placement.setDisabled(True)
@@ -326,6 +336,11 @@ class RecordTableDialog(QDialog):
 
         self.defaults = QLineEdit(self)
         self.defaults.setToolTip("""Insert default values: '0, "", "", True'.""")
+
+        self.linkbutton = QPushButton()
+        self.linkbutton.setText("Link to other table")
+        self.linkbutton.setToolTip("Click here to link this table to a versionized table or a cross reference table")
+        self.linkbutton.clicked.connect(self.link_to)
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
 
@@ -341,6 +356,9 @@ class RecordTableDialog(QDialog):
 
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
+    
+    def link_to(self):
+        pass
 
     def createTable(self):
 
