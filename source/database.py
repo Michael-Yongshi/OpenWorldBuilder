@@ -189,6 +189,7 @@ class Database(object):
         # get existing tables
         self.tables = []
         tablenames = self.read_table_names()
+        tablenames.sort()
         # print(f"getting tablenames for database {self.filename}")
 
         for tablename in tablenames:
