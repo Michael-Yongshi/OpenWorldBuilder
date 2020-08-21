@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
     QAction,
     QApplication,
     QCheckBox,
+    QComboBox,
     QDateTimeEdit,
     QFormLayout,
     QFrame,
@@ -27,6 +28,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton, 
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QVBoxLayout,
@@ -85,6 +87,7 @@ class WorldOverview(QMainWindow):
         self.database = None
 
         # selection settings
+        self.show_hidden_tables = False
         self.table_selected = None # Table object
         self.table_records = [] # list of records from table_selected
         self.record_selected = None
@@ -172,12 +175,12 @@ class WorldOverview(QMainWindow):
             #     "tooltip": "Save current world as ...",
             #     "connect": self.saveas_database
             # },
-            # {
-            #     "name": "Close",
-            #     "shortcut": "",
-            #     "tooltip": "Close current world",
-            #     "connect": self.close_database
-            # },
+            {
+                "name": "Toggle hidden tables",
+                "shortcut": "",
+                "tooltip": "Toggle show hidden tables on or off",
+                "connect": self.toggle_hidden_tables
+            },
             {
                 "name": "Delete",
                 "shortcut": "Ctrl+Q",
@@ -232,8 +235,20 @@ class WorldOverview(QMainWindow):
         filenamelabel.setText(f"World openend: <b>{self.database.filename}</b>")
         navbox.addWidget(filenamelabel)
 
+        combo = QComboBox()
+        for table in self.database.tables:
+            if (("CROSSREF" in table.name) or ("VERSION" in table.name) or ("FIXEDPARENT" in table.name)) and (self.show_hidden_tables == False):
+                pass
+            else:
+                combo.addItem(table.name)
+        if self.table_selected != None:
+            combo.setCurrentIndex(combo.findText(self.table_selected.name))
+        combo.currentTextChanged.connect(self.set_table)
+        navbox.addWidget(combo)
+
         listwidget = QListWidget()
         # print(f"table records {self.table_records}")
+        listwidget.addItem(QListWidgetItem("*New Record"))
         if self.table_records != []:
             for record in self.table_records:
                 # print(record.values)
@@ -243,28 +258,7 @@ class WorldOverview(QMainWindow):
                 listwidget.addItem(listwidgetitem)
             listwidget.itemClicked.connect(self.set_record_from_widget_item)
 
-        for table in self.database.tables:
-            box = QHBoxLayout()
-
-            listbtn = QPushButton()
-            listbtn.setText(table.name.title())
-            listbtn.clicked.connect(self.closure_nav_selection(table))
-            box.addWidget(listbtn, 5)
-
-            newbtn = QPushButton()
-            newbtn.setText("+")
-            newbtn.clicked.connect(self.closure_draft_record(table))
-            box.addWidget(newbtn, 1)
-
-            frame = QBorderlessFrame()
-            frame.setLayout(box)
-            navbox.addWidget(frame)
-
-            if self.table_selected == table:
-                navbox.addWidget(listwidget)
-
-        if self.table_selected == None:
-            navbox.addWidget(listwidget)
+        navbox.addWidget(listwidget)
 
         btntblnew = QPushButton()
         btntblnew.setText("New Table")
@@ -460,19 +454,22 @@ class WorldOverview(QMainWindow):
         else:
              print("Canceled creation of table")
 
-    def closure_nav_selection(self, selected):
-        
-        def nav_selection():
-            
-            self.table_selected = selected
-            self.record_selected = None
-            self.initUI()
+    def set_table(self, name):
 
-        return nav_selection
+        for table in self.database.tables:
+            if table.name == name:
+                self.table_selected = table
+                break
+
+        self.record_selected = None
+        self.initUI()
 
     def set_record_from_widget_item(self, widgetitem):
-
-        self.record_selected = widgetitem.data(1)
+        
+        if widgetitem.text() == "*New Record":
+            self.draft_record()
+        else:
+            self.record_selected = widgetitem.data(1)
         self.initUI()
 
     def set_record(self, record):
@@ -534,6 +531,10 @@ class WorldOverview(QMainWindow):
             self.initUI()
         else:
             messagebox = QMessageBox.warning(self, "Error", "No table selected. \nPlease select a table first.")
+
+    def toggle_hidden_tables(self):
+        self.show_hidden_tables = True if self.show_hidden_tables == False else False
+        self.initUI()
 
 def run():
     global app
