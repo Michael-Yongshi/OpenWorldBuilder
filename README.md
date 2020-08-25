@@ -9,6 +9,12 @@ An application in order to create and manage worldbuilding, characters and story
 
 The desktop frontend used for Linux and Windows
 
+Note: for generating a map of some kind, you could use standalone apps like:
+-donjon: https://donjon.bin.sh/fantasy/world/
+-Azgaar: https://azgaar.github.io/Fantasy-Map-Generator/
+-Terra Incognita: https://gmworldmap.com/
+
+
 ## Release Notes
 ### Release 0
 
