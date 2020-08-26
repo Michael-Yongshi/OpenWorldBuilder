@@ -1,4 +1,5 @@
 import os
+import ntpath
 import datetime
 
 from pathlib import Path
@@ -18,6 +19,20 @@ def get_localpath():
     path = os.path.expanduser(local_path)
 
     return path
+
+def split_complete_path(complete_path):
+
+    path, tail = ntpath.split(complete_path)
+
+    if tail == "":
+        path, tail = ntpath.split(complete_path[:-1])
+
+    filename = tail.split('.', 1)[0]
+    
+    # print(f"path {path}")
+    # print(f"filename {filename}")
+
+    return path, filename
 
 def show_files(path = ""):
     """Show all files in a folder"""
@@ -870,120 +885,122 @@ def print_records(records):
 
 if __name__ == "__main__":
 
-    filename = "backup"
+    split_complete_path(complete_path = "c:\\users\\documents\\file.txt\\")
 
-    db = Database(path="", filename=filename)
-    db.delete_database()
-    print(f"deleted database {filename}")
+    # filename = "backup"
 
-    filename = "science"
+    # db = Database(path="", filename=filename)
+    # db.delete_database()
+    # print(f"deleted database {filename}")
 
-    db = Database(path="", filename=filename)
-    db.delete_database()
-    print(f"deleted database {filename}")
+    # filename = "science"
 
-    db = Database(filename=filename)
+    # db = Database(path="", filename=filename)
+    # db.delete_database()
+    # print(f"deleted database {filename}")
 
-    sciencetbl = db.create_table(
-        name="scientists",
-        column_names = ["ordering", "name", "age", "nobelprizewinner"],
-        column_types = ["INTEGER", "Text", "Integer", "Bool"],
-    )
-    print(f"read table names: {db.read_table_names()}")
+    # db = Database(filename=filename)
 
-    values = [
-        [1, "Hawking", 68, True],
-        [2, "Edison's child said \"Apple!\"", 20, True],
-    ]
-    records = sciencetbl.createRecords(values)
-    print(f"creating initial records")
-    print_records(records)
+    # sciencetbl = db.create_table(
+    #     name="scientists",
+    #     column_names = ["ordering", "name", "age", "nobelprizewinner"],
+    #     column_types = ["INTEGER", "Text", "Integer", "Bool"],
+    # )
+    # print(f"read table names: {db.read_table_names()}")
+
+    # values = [
+    #     [1, "Hawking", 68, True],
+    #     [2, "Edison's child said \"Apple!\"", 20, True],
+    # ]
+    # records = sciencetbl.createRecords(values)
+    # print(f"creating initial records")
+    # print_records(records)
     
-    #test functions of table
-    print(f"read column names: {db.read_column_names(sciencetbl.name)}")
-    print(f"read column types: {db.read_column_types(sciencetbl.name)}")
-    print(f"read column metadata: {db.read_column_metadata(sciencetbl.name)}")
+    # #test functions of table
+    # print(f"read column names: {db.read_column_names(sciencetbl.name)}")
+    # print(f"read column types: {db.read_column_types(sciencetbl.name)}")
+    # print(f"read column metadata: {db.read_column_metadata(sciencetbl.name)}")
 
-    values = [3, "Einstein", 100, False]
-    record = sciencetbl.createRecord(values)
-    print(f"create single record")
-    print_records([record])
+    # values = [3, "Einstein", 100, False]
+    # record = sciencetbl.createRecord(values)
+    # print(f"create single record")
+    # print_records([record])
 
-    values = [
-        [4, "Rosenburg", 78, False],
-        [5, "Neil dGrasse Tyson", 57, True],
-    ]
-    records = sciencetbl.createRecords(values)
-    print(f"create multiple records")
-    print_records(records)
-
-    # columns = ["name", "age"]
-    # records = sciencetbl.readRecords(columns=columns)
-    # print(f"read only name and age columns for all records")
+    # values = [
+    #     [4, "Rosenburg", 78, False],
+    #     [5, "Neil dGrasse Tyson", 57, True],
+    # ]
+    # records = sciencetbl.createRecords(values)
+    # print(f"create multiple records")
     # print_records(records)
 
-    where = [["nobelprizewinner", [True]]]
-    records = sciencetbl.readRecords(where=where)
-    print(f"read where")
-    print_records(records)
+    # # columns = ["name", "age"]
+    # # records = sciencetbl.readRecords(columns=columns)
+    # # print(f"read only name and age columns for all records")
+    # # print_records(records)
 
-    valuepairs = [["nobelprizewinner", False]]
-    where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
-    records = sciencetbl.updateRecords(valuepairs=valuepairs, where=where)
-    print(f"update true to false")
-    print_records(records)
+    # where = [["nobelprizewinner", [True]]]
+    # records = sciencetbl.readRecords(where=where)
+    # print(f"read where")
+    # print_records(records)
 
-    valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
-    rowid = 5
-    record = sciencetbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
-    print(f"update record 'id = 5'")
-    print_records([record])
+    # valuepairs = [["nobelprizewinner", False]]
+    # where = [["nobelprizewinner", [True]], ["name", ["Hawking"]]]
+    # records = sciencetbl.updateRecords(valuepairs=valuepairs, where=where)
+    # print(f"update true to false")
+    # print_records(records)
 
-    records = sciencetbl.readRecords()
-    print(f"read all records")
-    print_records(records)
+    # valuepairs = [["name", "Neil de'Grasse Tyson"], ["age", 40]]
+    # rowid = 5
+    # record = sciencetbl.updateRecordbyID(valuepairs = valuepairs, rowid=rowid)
+    # print(f"update record 'id = 5'")
+    # print_records([record])
 
-    reltbl = db.create_table(
-        name = "relationships",
-        column_names=["charid1", "charid2", "description"],
-        column_types=["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
-    )
+    # records = sciencetbl.readRecords()
+    # print(f"read all records")
+    # print_records(records)
 
-    reltbl.db.read_column_metadata(reltbl.name)
+    # reltbl = db.create_table(
+    #     name = "relationships",
+    #     column_names=["charid1", "charid2", "description"],
+    #     column_types=["INTEGER REFERENCES scientists(id)", "INTEGER REFERENCES scientists(id)", "TEXT"],
+    # )
 
-    values = [1, 2, "hawking and edison"]
-    record = reltbl.createRecord(values)
-    print(f"create single record")
-    print_records([record])
+    # reltbl.db.read_column_metadata(reltbl.name)
 
-    records = reltbl.readRecords()
-    print(f"read all records")
-    print_records(records)
+    # values = [1, 2, "hawking and edison"]
+    # record = reltbl.createRecord(values)
+    # print(f"create single record")
+    # print_records([record])
 
-    records = reltbl.readForeignValues('charid1')
+    # records = reltbl.readRecords()
+    # print(f"read all records")
+    # print_records(records)
 
-    db.saveas_database(filename="backup")
-    db.close_database()
+    # records = reltbl.readForeignValues('charid1')
 
-    filename = "science"
+    # db.saveas_database(filename="backup")
+    # db.close_database()
 
-    db = Database(filename=filename)
+    # filename = "science"
 
-    teachertbl = db.create_table(
-        name="teachers",
-        column_names = ["ordering", "name", "age", "active"],
-        column_types = ["INTEGER", "Text", "Integer", "Bool"],
-    )
+    # db = Database(filename=filename)
 
-    db.delete_table(teachertbl)
+    # teachertbl = db.create_table(
+    #     name="teachers",
+    #     column_names = ["ordering", "name", "age", "active"],
+    #     column_types = ["INTEGER", "Text", "Integer", "Bool"],
+    # )
 
-    sciencetbl = db.get_table("scientists")
+    # db.delete_table(teachertbl)
 
-    where = [["nobelprizewinner", [True]]]
-    records = sciencetbl.readRecords(where=where)
+    # sciencetbl = db.get_table("scientists")
 
-    sciencetbl.deleteRecords(records)
+    # where = [["nobelprizewinner", [True]]]
+    # records = sciencetbl.readRecords(where=where)
 
-    for table in db.tables:
-        print(f"printing for table: {table.name}")
-        print_records(table.records)
+    # sciencetbl.deleteRecords(records)
+
+    # for table in db.tables:
+    #     print(f"printing for table: {table.name}")
+    #     print_records(table.records)
