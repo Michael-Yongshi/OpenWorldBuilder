@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDateTimeEdit,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QGridLayout,
@@ -58,6 +59,7 @@ from source.database import (
     saveas_file,
     check_existance,
     get_localpath,
+    split_complete_path,
 )
 
 class QMainApplication(QApplication):
@@ -205,10 +207,6 @@ class WorldOverview(QMainWindow):
 
         # self.widgets[1].setFocus()
 
-        # build a startup window if filename is empty
-        if self.database == None:
-            self.open_database(filename="")
-
     def set_nested_widget(self):
 
         overviewbox = QGridLayout()
@@ -220,11 +218,33 @@ class WorldOverview(QMainWindow):
             # vertical layout for left and right part
             overviewbox.addWidget(self.set_navbox(), 0, 0, 3, 1)
             overviewbox.addWidget(self.set_pagebox(), 0, 1, 3, 3)
+        # build a startup window if filename is empty
+        else:
+            overviewbox.addWidget(self.startup_window())
 
         overviewboxframe = QBorderlessFrame()
         overviewboxframe.setLayout(overviewbox)
 
         return overviewboxframe
+
+    def startup_window(self):
+
+        startbox = QVBoxLayout()
+
+        newbtn = QPushButton()
+        newbtn.setText("New")
+        newbtn.clicked.connect(self.new_database)
+        startbox.addWidget(newbtn)
+
+        openbtn = QPushButton()
+        openbtn.setText("Open")
+        openbtn.clicked.connect(self.open_database)
+        startbox.addWidget(openbtn)
+
+        startframe = QBorderlessFrame()
+        startframe.setLayout(startbox)
+
+        return startframe
 
     def set_navbox(self):
 
@@ -342,34 +362,34 @@ class WorldOverview(QMainWindow):
             if confirm == QMessageBox.No:
                 return
 
-        name, okPressed = QInputDialog.getText(self, "Create", "Name your world:")
-        if okPressed and name:
+        filename, okPressed = QInputDialog.getText(self, "Create", "Name your world:")
+        if okPressed and filename:
+            
+            path = get_localpath()
+            complete_path = os.path.join(path, filename)
 
-            if check_existance(filename=name) == False:
-                self.clean_variables()
-                self.database = create_database(filename = name, path="")
-                self.initUI()
+            filetuple = QFileDialog.getSaveFileName(self, 'Save location', complete_path, "SQLite3 databases (*.sqlite)")
+            if filetuple:
+                path, filename = split_complete_path(filetuple[0])
+                print(f"path {path} and filename {filename}")
 
-            else:
-                QMessageBox.warning(self, "Couldn't create world!", f"database with {name} already exists!", QMessageBox.Ok)
+                if check_existance(filename=filename) == False:
+                    self.clean_variables()
+                    self.database = create_database(filename=filename, path=path)
+                    self.initUI()
+
+                else:
+                    QMessageBox.warning(self, "Couldn't create world!", f"database with {filename} already exists!", QMessageBox.Ok)
 
     def open_database(self, filename="", path=""):
 
         # if filename is not given
         if filename == "" or filename == False:
 
-            # get list of save files /databases
-            path, files = show_files()
-            names = ["* New world"] + files
-
-            # Let user choose out of save files
-            name, okPressed = QInputDialog.getItem(self, "Choose", "Choose your world", names, 0, False)
-            if okPressed and name:
-                if name == "* New world":
-                    self.new_database()
-                    return
-                else:
-                    filename = name
+            filetuple = QFileDialog.getOpenFileName(self, 'Open file', get_localpath(), "SQLite3 databases (*.sqlite)")
+            if filetuple:
+                path, filename = split_complete_path(filetuple[0])
+                print(f"path {path} and filename {filename}")
 
         if filename != "" and filename != None:
             # print(filename)
@@ -390,18 +410,21 @@ class WorldOverview(QMainWindow):
 
     def saveas_database(self):
 
-        name, okPressed = QInputDialog.getText(self, "Save as...", "Name your new savefile")
-        if okPressed and name:
-            if check_existance(filename=name) == False:
+        filetuple = QFileDialog.getSaveFileName(self, 'Save location', self.database.path, "SQLite3 databases (*.sqlite)")
+        if filetuple:
+            path, filename = split_complete_path(filetuple[0])
+            print(f"path {path} and filename {filename}")
+
+            if check_existance(filename=filename) == False:
 
                 # save the database under a different name and then select the new database
-                self.database.saveas_database(filename=name, path=self.database.path)
-                self.open_database(filename=name, path=self.database.path)
+                self.database.saveas_database(filename=filename, path=path)
+                self.open_database(filename=filename, path=path)
 
                 QMessageBox.information(self, "Saved", "Save successful!", QMessageBox.Ok)
 
             else:
-                QMessageBox.warning(self, "Couldn't create world!", f"database with {name} already exists!", QMessageBox.Ok)
+                QMessageBox.warning(self, "Couldn't create world!", f"database with {filename} already exists!", QMessageBox.Ok)
 
     def close_database(self):
         
