@@ -1,6 +1,6 @@
 import datetime
 
-from source.database import Database, Table
+from sqlitemanager.database import Database, Table
 
 def create_database(filename, path):
 

@@ -51,12 +51,10 @@ from gui.widgets import (
 )
 
 from source.tablebuilder import create_database
-from source.database import (
+from sqlitemanager.database import (
     Database,
     Table,
     Record,
-    show_files,
-    saveas_file,
     check_existance,
     get_localpath,
     split_complete_path,

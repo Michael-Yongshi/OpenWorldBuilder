@@ -1,5 +1,7 @@
 ###### Requirements without Version Specifiers ######`
 pyqt5
+pyqt-guidarktheme
+sqlitemanager
 
 ###### Requirements with Version Specifiers ######`
 # pyqt5 >= 0.6.1             # Version Matching. Must be version 0.6.1
