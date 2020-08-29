@@ -374,6 +374,7 @@ class WorldOverview(QMainWindow):
             if check_existance(path=path, filename=filename) == False:
                 self.close_database()
                 self.handler.database_new(filename=filename, path=path)
+                create_owb_database(self.handler)
                 self.initUI()
 
             else:
@@ -433,7 +434,7 @@ class WorldOverview(QMainWindow):
 
         if self.table_selected != None:
 
-            self.table_records = self.handler.table_read_records(table_selected)
+            self.table_records = self.handler.table_read_records(self.table_selected.name)
             # print(self.table_records)
     
     def new_table(self):
@@ -528,8 +529,9 @@ class WorldOverview(QMainWindow):
 
     def delete_record(self):
 
-        self.table_selected.deleteRecords([self.record_selected])
+        self.handler.table_delete_records(tablename=self.table_selected.name, where=self.record_selected.primarykey)
         self.record_selected = None
+        self.get_records()
         self.initUI()
 
     def delete_table(self):
