@@ -50,7 +50,7 @@ from source.database import (
 )
 
 class RecordLayout(QGridLayout):
-    def __init__(self, record, database):
+    def __init__(self, mainwindow):
         super().__init__()
 
         """

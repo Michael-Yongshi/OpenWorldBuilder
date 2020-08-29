@@ -50,15 +50,19 @@ from gui.widgets import (
     RecordTableDialog,
 )
 
-from source.tablebuilder import create_database
+from sqlitemanager.handler import SQLiteHandler
 from sqlitemanager.database import (
     Database,
     Table,
     Record,
+    )
+from sqlitemanager.helpers import (
     check_existance,
     get_localpath,
     split_complete_path,
-)
+    )
+
+from source.tablebuilder import create_owb_database
 
 class QMainApplication(QApplication):
     """A Dark styled application."""
@@ -84,7 +88,7 @@ class WorldOverview(QMainWindow):
         # file settings
         self.filename = None
         self.path = get_localpath()
-        self.database = None
+        self.handler = SQLiteHandler()
 
         # selection settings
         self.show_hidden_tables = False
@@ -209,7 +213,7 @@ class WorldOverview(QMainWindow):
 
         overviewbox = QGridLayout()
 
-        if self.database != None:
+        if self.handler.database != None:
             # get records from database if there is a table selected
             self.get_records()
             
@@ -250,15 +254,15 @@ class WorldOverview(QMainWindow):
         navbox = QVBoxLayout()
 
         filenamelabel = QLabel()
-        filenamelabel.setText(f"World openend: <b>{self.database.filename}</b>")
+        filenamelabel.setText(f"World openend: <b>{self.handler.database.filename}</b>")
         navbox.addWidget(filenamelabel)
 
         combo = QComboBox()
-        for table in self.database.tables:
-            if (("CROSSREF" in table.name) or ("VERSION" in table.name) or ("FIXEDPARENT" in table.name)) and (self.show_hidden_tables == False):
+        for key in self.handler.database.tables:
+            if (("CROSSREF" in key) or ("VERSION" in key) or ("FIXEDPARENT" in key)) and (self.show_hidden_tables == False):
                 pass
             else:
-                combo.addItem(table.name)
+                combo.addItem(key)
         if self.table_selected != None:
             combo.setCurrentIndex(combo.findText(self.table_selected.name))
         combo.currentTextChanged.connect(self.set_table)
@@ -297,7 +301,7 @@ class WorldOverview(QMainWindow):
 
         # we will create a gridlayout of the selected record with all the widgets and a seperate array with the widgets in order to manipulate them and pull values
         if self.record_selected != None:
-            self.record_layout = RecordLayout(self.record_selected, self.database)
+            self.record_layout = RecordLayout(self)
         else:
             self.record_layout = QGridLayout()
         record_frame = QRaisedFrame()
@@ -312,7 +316,7 @@ class WorldOverview(QMainWindow):
             if self.record_selected == None:
                 newbtn = QPushButton()
                 newbtn.setText("New Record")
-                newbtn.clicked.connect(self.draft_record)
+                newbtn.clicked.connect(self.create_record)
                 buttonbox.addWidget(newbtn, 1)
 
                 delbtn = QPushButton()
@@ -325,7 +329,7 @@ class WorldOverview(QMainWindow):
                     createbtn = QPushButton()
                     createbtn.setText("Confirm Creation")
                     createbtn.setShortcut("Ctrl+S")
-                    createbtn.clicked.connect(self.create_record)
+                    createbtn.clicked.connect(self.add_record)
                     buttonbox.addWidget(createbtn, 1)
 
                 else:
@@ -355,29 +359,25 @@ class WorldOverview(QMainWindow):
     def new_database(self):
         """Create a new world"""
 
-        if self.database != None:
+        if self.handler.database != None:
             confirm = QMessageBox.question(self, 'Are you sure?', f"There is currently a world loaded.\nDo you want to create a new world?", QMessageBox.Yes | QMessageBox.No)
             if confirm == QMessageBox.No:
                 return
+        
+        path = get_localpath()
 
-        filename, okPressed = QInputDialog.getText(self, "Create", "Name your world:")
-        if okPressed and filename:
-            
-            path = get_localpath()
-            complete_path = os.path.join(path, filename)
+        filetuple = QFileDialog.getSaveFileName(self, 'Save location', path, "SQLite3 databases (*.sqlite)")
+        if filetuple:
+            path, filename = split_complete_path(filetuple[0])
+            print(f"path {path} and filename {filename}")
 
-            filetuple = QFileDialog.getSaveFileName(self, 'Save location', complete_path, "SQLite3 databases (*.sqlite)")
-            if filetuple:
-                path, filename = split_complete_path(filetuple[0])
-                print(f"path {path} and filename {filename}")
+            if check_existance(path=path, filename=filename) == False:
+                self.close_database()
+                self.handler.database_new(filename=filename, path=path)
+                self.initUI()
 
-                if check_existance(filename=filename) == False:
-                    self.clean_variables()
-                    self.database = create_database(filename=filename, path=path)
-                    self.initUI()
-
-                else:
-                    QMessageBox.warning(self, "Couldn't create world!", f"database with {filename} already exists!", QMessageBox.Ok)
+            else:
+                QMessageBox.warning(self, "Couldn't create world!", f"database with {filename} already exists!", QMessageBox.Ok)
 
     def open_database(self, filename="", path=""):
 
@@ -393,30 +393,24 @@ class WorldOverview(QMainWindow):
             # print(filename)
             
             # clean data
-            self.clean_variables()
-            self.database = Database(filename=filename, path=path)
+            self.close_database()
+            self.handler.database_open(filename=filename, path=path)
             self.initUI()
-
-    def clean_variables(self):
-            # clean data
-            self.table_selected = None # Table object
-            self.table_records = [] # list of records from table_selected
-            self.record_selected = None
 
     def save_database(self):
         pass
 
     def saveas_database(self):
 
-        filetuple = QFileDialog.getSaveFileName(self, 'Save location', self.database.path, "SQLite3 databases (*.sqlite)")
+        filetuple = QFileDialog.getSaveFileName(self, 'Save location', self.handler.database.path, "SQLite3 databases (*.sqlite)")
         if filetuple:
             path, filename = split_complete_path(filetuple[0])
             print(f"path {path} and filename {filename}")
 
-            if check_existance(filename=filename) == False:
+            if check_existance(path=path, filename=filename) == False:
 
                 # save the database under a different name and then select the new database
-                self.database.saveas_database(filename=filename, path=path)
+                self.handler.database_saveas(filename=filename, path=path)
                 self.open_database(filename=filename, path=path)
 
                 QMessageBox.information(self, "Saved", "Save successful!", QMessageBox.Ok)
@@ -427,9 +421,11 @@ class WorldOverview(QMainWindow):
     def close_database(self):
         
         # clean data
-        self.clean_variables()
-
-        self.initUI()
+        self.handler.database_close()
+        self.table_selected = None # Table object
+        self.table_records = [] # list of records from table_selected
+        self.record_selected = None
+        self.record_array = []
 
     def get_records(self):
 
@@ -437,7 +433,7 @@ class WorldOverview(QMainWindow):
 
         if self.table_selected != None:
 
-            self.table_records = self.table_selected.readRecords()
+            self.table_records = self.handler.table_read_records(table_selected)
             # print(self.table_records)
     
     def new_table(self):
@@ -466,7 +462,6 @@ class WorldOverview(QMainWindow):
                 print(f"Create {tabletype}")
                 dialog = RecordTableDialog(self)
 
-
             if dialog.exec():
                 self.table_selected = dialog.createTable()
                 self.initUI()
@@ -477,9 +472,9 @@ class WorldOverview(QMainWindow):
 
     def set_table(self, name):
 
-        for table in self.database.tables:
-            if table.name == name:
-                self.table_selected = table
+        for key in self.handler.database.tables:
+            if key == name:
+                self.table_selected = self.handler.database.tables[key]
                 break
 
         self.record_selected = None
@@ -488,7 +483,7 @@ class WorldOverview(QMainWindow):
     def set_record_from_widget_item(self, widgetitem):
         
         if widgetitem.text() == "*New Record":
-            self.draft_record()
+            self.record_selected = self.handler.record_create(tablename=self.table_selected.name)
         else:
             self.record_selected = widgetitem.data(1)
         self.initUI()
@@ -498,29 +493,21 @@ class WorldOverview(QMainWindow):
         self.record_selected = record
         self.initUI()
 
-    def closure_draft_record(self, table):
-        
-        def draft_record():
+    def create_record(self):
 
-            self.table_selected = table
-            self.draft_record()
-
-        return draft_record
-
-    def draft_record(self):
-
-        self.record_selected = self.table_selected.create_draft_record()
+        self.record_selected = self.handler.record_create(tablename=self.table_selected.name)
         self.initUI()
 
-    def create_record(self):
+    def add_record(self):
 
         # get a Record object for the new record
         newrecord = self.record_layout.processValues()
-        print(f"newrecord including orderer {newrecord.values}")
+        print(f"newrecord with values {newrecord.values}")
 
         # create the new record in database and retrieve the new record from database
-        record = newrecord.table.createRecord(values=newrecord.values)
-        # print(f"record {newrecord.recordarray}")
+        records = self.handler.table_add_records(tablename=self.table_selected.name, records=[newrecord])
+        record = records[0]
+        print(f"record {newrecord.recordarray}")
 
         # set the selected record to the new record
         self.set_record(record)
@@ -533,8 +520,9 @@ class WorldOverview(QMainWindow):
         updaterecord = self.record_layout.processValues()
 
         # update the record in database and retrieve the updated record from database
-        record = self.table_selected.updateRecordbyID(rowid=updaterecord.primarykey, valuepairs=updaterecord.valuepairs)
-
+        records = self.handler.table_update_records(tablename=self.table_selected.name, valuepairs=updaterecord.valuepairs, where=updaterecord.primarykey)
+        record = records[0]
+        
         self.set_record(record)
         self.initUI()
 
@@ -547,8 +535,8 @@ class WorldOverview(QMainWindow):
     def delete_table(self):
 
         if self.table_selected != None:
-            self.database.delete_table(self.table_selected)
-            self.clean_variables()
+            self.handler.database.delete_table(self.table_selected)
+            self.close_database()
             self.initUI()
         else:
             messagebox = QMessageBox.warning(self, "Error", "No table selected. \nPlease select a table first.")

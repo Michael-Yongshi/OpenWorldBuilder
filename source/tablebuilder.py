@@ -1,8 +1,8 @@
 import datetime
 
-from sqlitemanager.database import Database, Table
+from sqlitemanager.handler import SQLiteHandler
 
-def create_database(filename, path):
+def create_owb_database(filename, path):
 
     db = Database(
         filename = filename,
