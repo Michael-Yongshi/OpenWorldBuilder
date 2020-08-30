@@ -404,10 +404,9 @@ class WorldOverview(QMainWindow):
     def saveas_database(self):
 
         filetuple = QFileDialog.getSaveFileName(self, 'Save location', self.handler.database.path, "SQLite3 databases (*.sqlite)")
-        if filetuple:
-            path, filename = split_complete_path(filetuple[0])
-            print(f"path {path} and filename {filename}")
+        path, filename = split_complete_path(filetuple[0])
 
+        if filename != "":
             if check_existance(path=path, filename=filename) == False:
 
                 # save the database under a different name and then select the new database
