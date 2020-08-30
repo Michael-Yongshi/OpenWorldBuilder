@@ -87,15 +87,15 @@ class WorldOverview(QMainWindow):
 
         # file settings
         self.filename = None
-        self.path = get_localpath()
+        self.path = None
         self.handler = SQLiteHandler()
 
         # selection settings
         self.show_hidden_tables = False
-        self.table_selected = None # Table object
-        self.table_records = [] # list of records from table_selected
-        self.record_selected = None
-        self.record_array = []
+        self.table_selected = None # Table object that is selected
+        self.table_records = [] # list of records from the selected table
+        self.record_selected = None # Record object that is selected
+        self.record_array = [] # the array of values from the selected record
 
         # set menu bar
         self.set_menu_bar()
@@ -245,7 +245,8 @@ class WorldOverview(QMainWindow):
 
         startframe = QBorderlessFrame()
         startframe.setLayout(startbox)
-
+        startframe.setFixedSize(200, 100)
+        
         return startframe
 
     def set_navbox(self):
@@ -367,14 +368,15 @@ class WorldOverview(QMainWindow):
         path = get_localpath()
 
         filetuple = QFileDialog.getSaveFileName(self, 'Save location', path, "SQLite3 databases (*.sqlite)")
-        if filetuple:
-            path, filename = split_complete_path(filetuple[0])
+        path, filename = split_complete_path(filetuple[0])
+
+        if filename != "":
             print(f"path {path} and filename {filename}")
 
             if check_existance(path=path, filename=filename) == False:
                 self.close_database()
                 self.handler.database_new(filename=filename, path=path)
-                create_owb_database(self.handler)
+                create_owb_database(self, filename, path)
                 self.initUI()
 
             else:
@@ -386,9 +388,7 @@ class WorldOverview(QMainWindow):
         if filename == "" or filename == False:
 
             filetuple = QFileDialog.getOpenFileName(self, 'Open file', get_localpath(), "SQLite3 databases (*.sqlite)")
-            if filetuple:
-                path, filename = split_complete_path(filetuple[0])
-                print(f"path {path} and filename {filename}")
+            path, filename = split_complete_path(filetuple[0])
 
         if filename != "" and filename != None:
             # print(filename)
@@ -484,7 +484,7 @@ class WorldOverview(QMainWindow):
     def set_record_from_widget_item(self, widgetitem):
         
         if widgetitem.text() == "*New Record":
-            self.record_selected = self.handler.record_create(tablename=self.table_selected.name)
+            self.create_record()
         else:
             self.record_selected = widgetitem.data(1)
         self.initUI()
@@ -522,6 +522,7 @@ class WorldOverview(QMainWindow):
 
         # update the record in database and retrieve the updated record from database
         records = self.handler.table_update_records(tablename=self.table_selected.name, valuepairs=updaterecord.valuepairs, where=updaterecord.primarykey)
+        print(records)
         record = records[0]
         
         self.set_record(record)
