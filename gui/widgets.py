@@ -64,8 +64,8 @@ class RecordLayout(QGridLayout):
     def build_layout(self):
 
         self.build_detailbox()
-        self.build_childrenbox()
-        self.build_xrefbox()
+        # self.build_childrenbox()
+        # self.build_xrefbox()
 
     def build_detailbox(self):
 
@@ -86,18 +86,17 @@ class RecordLayout(QGridLayout):
 
             # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
             fkfound = False
-            print(f"columntype.upper = {columntype.upper()}")
+            # print(f"columntype.upper = {columntype.upper()}")
             if "REFERENCES" in columntype.upper():
                 fkfound = True
-
+                print(f"index {index} and recordarray {recordarray}, found foreign key {columntype}")
                 widget_value = QComboBox()
-
-                # Create first row for a no choice option
-                zero_valuepair = [0, f"No {columnname}"]
-                valuepairs = [zero_valuepair]
 
                 # get the actual records of the foreign table
                 foreign_records = self.mainwindow.handler.table_get_foreign_records(tablename=table.name, column=columnname)
+
+                # Create first row for a no choice option
+                widget_value.addItem(f"No {columnname}", 0)
 
                 # get the id and name column of the foreign records
                 for record_index, foreign_record in enumerate(foreign_records):
@@ -123,7 +122,7 @@ class RecordLayout(QGridLayout):
             if fkfound == False:
                 ctype = columntype.split(' ', 1)[0].upper()
                 # print(f"ctype = {ctype}")
-
+                print(f"index {index} and recordarray {recordarray}")
                 if ctype == "INTEGER":
                     widget_value = QSpinBox()
                     widget_value.setMinimum(-1)
@@ -220,7 +219,7 @@ class RecordLayout(QGridLayout):
         # finish window
         frame = QFrame()
         frame.setLayout(box)
-        self.addWidget(frame, 0,1,1,1)
+        self.addWidget(frame, 0,9,1,1)
 
     def build_xrefbox(self):
 
@@ -231,7 +230,7 @@ class RecordLayout(QGridLayout):
         # finish window
         frame = QFrame()
         frame.setLayout(box)
-        self.addWidget(frame, 1,1,1,1)
+        self.addWidget(frame, 1,9,1,1)
 
     def processValues(self):
         """
@@ -261,7 +260,7 @@ class RecordLayout(QGridLayout):
                     fkfound = True
                     currentindex = widgets[index].currentIndex()
                     currentid = widgets[index].itemData(currentindex)
-                    print(f"itemindex {currentindex} and itemdata {currentid}")
+                    # print(f"itemindex {currentindex} and itemdata {currentid}")
                     recordarray.append(currentid)
 
             if fkfound == False:
