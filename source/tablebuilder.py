@@ -210,18 +210,19 @@ def get_xreference_tables(handler):
     we record every time a character plays in an event, creating a list of these occurences
     """
 
-    # Stories to characters
+    # Creating this manually as its something linked to itself
     handler.table_create(
-        tablename = "CROSSREF_stories_characters",
-        column_names = ["story_id", "character_id", "description"],
-        column_types = ["INTEGER REFERENCES stories(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
-    )
-
-    handler.table_create(
-        tablename = "CROSSREF_relationships",
+        tablename = "Relationships",
         column_names = ["character1_id", "character2_id", "description"],
         column_types = ["INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
     )
+
+    # Stories to characters
+    handler.crossref_create(
+        tablename1="stories",
+        tablename2="characters",
+    )
+
 
 # # Template
 # handler.table_create(
