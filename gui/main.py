@@ -218,8 +218,8 @@ class WorldOverview(QMainWindow):
             self.get_records()
             
             # vertical layout for left and right part
-            overviewbox.addWidget(self.set_navbox(), 0, 0, 3, 1)
-            overviewbox.addWidget(self.set_pagebox(), 0, 1, 3, 3)
+            overviewbox.addWidget(self.set_navbox(), 0, 0, 1, 1)
+            overviewbox.addWidget(self.set_pagebox(), 0, 1, 1, 3)
         # build a startup window if filename is empty
         else:
             overviewbox.addWidget(self.startup_window())
@@ -254,24 +254,35 @@ class WorldOverview(QMainWindow):
         # vertical layout for left and right part
         navbox = QVBoxLayout()
 
-        filenamelabel = QLabel()
-        filenamelabel.setText(f"World openend: <b>{self.handler.database.filename}</b>")
-        navbox.addWidget(filenamelabel)
+        # filenamelabel = QLabel()
+        # filenamelabel.setText(f"World openend: <b>{self.handler.database.filename}</b>")
+        # navbox.addWidget(filenamelabel)
 
-        combo = QComboBox()
-        for key in self.handler.database.tables:
-            if (("CROSSREF" in key) or ("VERSION" in key) or ("FIXEDPARENT" in key)) and (self.show_hidden_tables == False):
+        scrolltables = QScrollArea()
+        btnlist = QVBoxLayout()
+        tables = self.handler.database.tables
+        for tablename in tables:
+            if (("CROSSREF" in tablename) or ("VERSION" in tablename) or ("FIXEDPARENT" in tablename)) and (self.show_hidden_tables == False):
                 pass
             else:
-                combo.addItem(key)
-        if self.table_selected != None:
-            combo.setCurrentIndex(combo.findText(self.table_selected.name))
-        combo.currentTextChanged.connect(self.set_table)
-        navbox.addWidget(combo)
+                btn = QPushButton()
+                btn.setText(tablename)
+                if self.table_selected != None:
+                    if self.table_selected.name == tablename:
+                        btn.setEnabled(False)
+                if btn.isEnabled() == True:
+                    btn.clicked.connect(self.closure_set_table(table=tables[tablename]))
+                btnlist.addWidget(btn)
+        frametables = QRaisedFrame()
+        frametables.setLayout(btnlist)
+        scrolltables.setWidget(frametables)
+        scrolltables.setWidgetResizable(True)
+        navbox.addWidget(scrolltables)
 
+        scrollrecords = QScrollArea()
         listwidget = QListWidget()
         # print(f"table records {self.table_records}")
-        listwidget.addItem(QListWidgetItem("*New Record"))
+        listwidget.addItem(QListWidgetItem("***New Record***"))
         if self.table_records != []:
             for record in self.table_records:
                 # print(record.values)
@@ -280,13 +291,14 @@ class WorldOverview(QMainWindow):
                 listwidgetitem.setData(1, record)
                 listwidget.addItem(listwidgetitem)
             listwidget.itemClicked.connect(self.set_record_from_widget_item)
+        scrollrecords.setWidget(listwidget)
+        scrollrecords.setWidgetResizable(True)
+        navbox.addWidget(scrollrecords)
 
-        navbox.addWidget(listwidget)
-
-        btntblnew = QPushButton()
-        btntblnew.setText("New Table")
-        btntblnew.clicked.connect(self.new_table)
-        navbox.addWidget(btntblnew)
+        # btntblnew = QPushButton()
+        # btntblnew.setText("New Table")
+        # btntblnew.clicked.connect(self.new_table)
+        # navbox.addWidget(btntblnew)
 
         navboxframe = QRaisedFrame()
         navboxframe.setLayout(navbox)
@@ -470,13 +482,16 @@ class WorldOverview(QMainWindow):
         else:
              print("Canceled creation of table")
 
-    def set_table(self, name):
+    def closure_set_table(self, table):
+        def set_table():
 
-        for key in self.handler.database.tables:
-            if key == name:
-                self.table_selected = self.handler.database.tables[key]
-                break
+            self.set_table(table)
 
+        return set_table
+
+    def set_table(self, table):
+
+        self.table_selected = table
         self.record_selected = None
         self.initUI()
 
