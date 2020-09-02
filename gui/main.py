@@ -1,64 +1,64 @@
 import sys
-import os
-from datetime import datetime
+# import os
+# from datetime import datetime
 
-from PyQt5.QtCore import (
-    Qt,
-    pyqtSignal,
-    QDate,
-    QDateTime,
-    )
+# from PyQt5.QtCore import (
+#     Qt,
+#     pyqtSignal,
+#     QDate,
+#     QDateTime,
+#     )
 
-from PyQt5.QtWidgets import (
-    QAction,
-    QApplication,
-    QCheckBox,
-    QComboBox,
-    QDateTimeEdit,
-    QFileDialog,
-    QFormLayout,
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
-    QInputDialog,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QMainWindow,
-    QMessageBox,
-    QProgressBar,
-    QPushButton, 
-    QScrollArea,
-    QSizePolicy,
-    QSpinBox,
-    QVBoxLayout,
-    QWidget, 
-    )
+# from PyQt5.QtWidgets import (
+#     QAction,
+#     QApplication,
+#     QCheckBox,
+#     QComboBox,
+#     QDateTimeEdit,
+#     QFileDialog,
+#     QFormLayout,
+#     QFrame,
+#     QGridLayout,
+#     QHBoxLayout,
+#     QInputDialog,
+#     QLabel,
+#     QLineEdit,
+#     QListWidget,
+#     QListWidgetItem,
+#     QMainWindow,
+#     QMessageBox,
+#     QProgressBar,
+#     QPushButton, 
+#     QScrollArea,
+#     QSizePolicy,
+#     QSpinBox,
+#     QVBoxLayout,
+#     QWidget, 
+#     )
 
-from PyQt5.QtGui import (
-    QFont,
-    QFontDatabase,
-    QIcon,
-    )
+# from PyQt5.QtGui import (
+#     QFont,
+#     QFontDatabase,
+#     QIcon,
+#     )
     
-from guidarktheme.widget_template import *
-from guidarktheme.decorators import Decorators
+from guidarktheme.widget_template import DarkApplication
+# from guidarktheme.decorators import Decorators
 
-from sqlitemanager.handler import SQLiteHandler
-from sqlitemanager.database import (
-    Database,
-    Table,
-    Record,
-    )
-from sqlitemanager.helpers import (
-    check_existance,
-    get_localpath,
-    split_complete_path,
-    )
+# from sqlitemanager.handler import SQLiteHandler
+# from sqlitemanager.database import (
+#     Database,
+#     Table,
+#     Record,
+#     )
+# from sqlitemanager.helpers import (
+    # check_existance,
+    # get_localpath,
+    # split_complete_path,
+    # )
 from sqlitemanager.mainwindow import SQLmainwindow
 
-from source.tablebuilder import create_owb_database
+# from source.tablebuilder import create_owb_database
     
 # class MainWindow():
 #     """The main window that everything runs in"""
