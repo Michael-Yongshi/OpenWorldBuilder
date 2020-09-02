@@ -76,7 +76,7 @@ class QMainApplication(QApplication):
         self.setStyleSheet("QToolTip { color: #ffffff; background-color: grey; border: 1px solid white; }")
     
 
-class WorldOverview(QMainWindow):
+class SQLmainwindow(QMainWindow):
     """The main window that everything runs in"""
     def __init__(self):
         super().__init__()
@@ -566,5 +566,5 @@ def run():
     global app
     app = QMainApplication(sys.argv)
     global main
-    main = WorldOverview()
+    main = SQLmainwindow()
     sys.exit(app.exec_())
