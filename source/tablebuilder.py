@@ -1,24 +1,18 @@
 import datetime
 
-from sqlitemanager.database import Database, Table
+def create_owb_database(mainwindow, filename, path):
 
-def create_database(filename, path):
+    handler = mainwindow.handler
+    handler.database_new(filename=filename, path=path)
 
-    db = Database(
-        filename = filename,
-        path = path,
-    )
+    get_normal_tables(handler)
+    get_parent_tables(handler)
+    get_fixed_parent_tables(handler)
+    get_versionized_tables(handler)
+    get_xreference_tables(handler)
+    print(f"Tables added to database: {handler.database.tables}")
 
-    get_normal_tables(db)
-    get_parent_tables(db)
-    get_fixed_parent_tables(db)
-    get_versionized_tables(db)
-    get_xreference_tables(db)
-    print(f"Tables added to database: {db.read_table_names()}")
-
-    return db
-
-def get_normal_tables(db):
+def get_normal_tables(handler):
     """
     TL;DR: child tables with the actual records / data
 
@@ -28,12 +22,12 @@ def get_normal_tables(db):
     """
 
     # Story
-    db.create_table(
-        name = "stories",
+    handler.table_create(
+        tablename = "stories",
         record_name = "story",
-        column_names = ["ordering", "name", "summary", "body"],
-        column_types = ["INTEGER", "VARCHAR(255)", "VARCHAR(255)", "TEXT"],
-        column_placement = [
+        column_names = ["summary", "body"],
+        column_types = ["VARCHAR(255)", "TEXT"],
+        column_placements = [
             # row, column, height, width
             [1,0,1,1],
             [2,0,1,1],
@@ -43,35 +37,35 @@ def get_normal_tables(db):
     )
 
     # Events
-    db.create_table(
-        name = "events",
-        column_names = ["ordering", "name", "date", "formatdate", "begin", "end", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "INTEGER", "VARCHAR(255)", "BOOL", "BOOL", "TEXT"],
+    handler.table_create(
+        tablename = "events",
+        column_names = ["date", "formatdate", "begin", "end", "description"],
+        column_types = ["INTEGER", "VARCHAR(255)", "BOOL", "BOOL", "TEXT"],
         defaults = ["", 0, "", True, True, ""],
     )
 
     # Timelines
-    db.create_table(
-        name = "timelines",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    handler.table_create(
+        tablename = "timelines",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
     
     # Locations
-    db.create_table(
-        name = "locations",
-        column_names = ["ordering", "name", "province_id", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "INTEGER REFERENCES provinces(id)", "TEXT"],
+    handler.table_create(
+        tablename = "locations",
+        column_names = ["province_id", "description"],
+        column_types = ["INTEGER REFERENCES provinces(id)", "TEXT"],
     )
 
     # Characters
-    db.create_table(
-        name = "characters",
-        column_names = ["ordering", "name", "age", "gender", "nationality", "culture", "race", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "INTEGER", "INTEGER REFERENCES FIXEDPARENT_genders(id)", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES cultures(id)", "INTEGER REFERENCES races(id)", "TEXT"],
+    handler.table_create(
+        tablename = "characters",
+        column_names = ["age", "gender", "nationality", "culture", "race", "description"],
+        column_types = ["INTEGER", "INTEGER REFERENCES FIXEDPARENT_genders(id)", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES cultures(id)", "INTEGER REFERENCES races(id)", "TEXT"],
     )
 
-def get_parent_tables(db):
+def get_parent_tables(handler):
     """
     TL;DR: Parent tables: one-to-many
 
@@ -88,66 +82,66 @@ def get_parent_tables(db):
 
     # # shown parent tables
     # Cultures
-    db.create_table(
-        name = "cultures",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    handler.table_create(
+        tablename = "cultures",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Races
-    db.create_table(
-        name = "races",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    handler.table_create(
+        tablename = "races",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Provinces
-    db.create_table(
-        name = "provinces",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    handler.table_create(
+        tablename = "provinces",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Countries (versionized)
-    db.create_table(
-        name = "countries",
+    handler.table_create(
+        tablename = "countries",
         record_name = "Country",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Empires (versionized)
-    db.create_table(
-        name = "empires",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    handler.table_create(
+        tablename = "empires",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Magic
-    db.create_table(
-        name = "magics",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+    handler.table_create(
+        tablename = "magics",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Tech
-    db.create_table(
-        name = "technologies",
+    handler.table_create(
+        tablename = "technologies",
         record_name= "technology",
-        column_names = ["ordering", "name", "description"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT"],
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
 
     # Research
-    db.create_table(
-        name = "research",
-        column_names = ["ordering", "name", "description", "source"],
-        column_types = ["INTEGER", "VARCHAR(255)", "TEXT", "VARCHAR(255)"],
+    handler.table_create(
+        tablename = "research",
+        column_names = ["description", "source"],
+        column_types = ["TEXT", "VARCHAR(255)"],
     )
 
     return tables
 
-def get_fixed_parent_tables(db):
+def get_fixed_parent_tables(handler):
     """
     TL;DR: Parent tables: one-to-many fixed parent table
 
@@ -159,20 +153,22 @@ def get_fixed_parent_tables(db):
     """
 
     # # not shown fixed parent tables
-    gendertbl = db.create_table(
-        name = "FIXEDPARENT_genders",
-        column_names = ["name", "description"],
-        column_types = ["VARCHAR(255)", "TEXT"],
+    gendertbl = handler.table_create(
+        tablename = "FIXEDPARENT_genders",
+        column_names = ["description"],
+        column_types = ["TEXT"],
     )
-    gendertbl.createRecords(
-        records = [
-            ["Undetermined", "Undetermined"],
-            ["Male", "Male"],
-            ["Female", "Female"],
+    handler.table_create_add_records(
+        tablename = gendertbl.name,
+        recordsvalues = [
+            [1, "Undetermined", "Undetermined"],
+            [2, "Male", "Male"],
+            [3, "Female", "Female"],
         ]
     )
 
-def get_versionized_tables(db):
+
+def get_versionized_tables(handler):
     """
     TL;DR: Parent tables: many-to-many on a certain condition
 
@@ -191,19 +187,19 @@ def get_versionized_tables(db):
     a character can only be in one place at a time, but over time this changes, making this a versionized many-to-many relationship on condition of time
     """
 
-    db.create_table(
-        name = "VERSION_countries_provinces",
-        column_names = ["name", "startversion", "endversion", "country_id", "province_id", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES provinces(id)", "TEXT"],
+    handler.table_create(
+        tablename = "VERSION_countries_provinces",
+        column_names = ["startversion", "endversion", "country_id", "province_id", "description"],
+        column_types = ["INTEGER", "INTEGER", "INTEGER REFERENCES countries(id)", "INTEGER REFERENCES provinces(id)", "TEXT"],
     )
 
-    db.create_table(
-        name = "VERSION_empires_countries",
-        column_names = ["name", "startversion", "endversion", "empire_id", "country_id", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER", "INTEGER", "INTEGER REFERENCES empires(id)", "INTEGER REFERENCES countries(id)", "TEXT"],
+    handler.table_create(
+        tablename = "VERSION_empires_countries",
+        column_names = ["startversion", "endversion", "empire_id", "country_id", "description"],
+        column_types = ["INTEGER", "INTEGER", "INTEGER REFERENCES empires(id)", "INTEGER REFERENCES countries(id)", "TEXT"],
     )
 
-def get_xreference_tables(db):
+def get_xreference_tables(handler):
     """
     TL;DR: child to child: many-to-many
 
@@ -214,22 +210,23 @@ def get_xreference_tables(db):
     we record every time a character plays in an event, creating a list of these occurences
     """
 
-    # Stories to characters
-    db.create_table(
-        name = "CROSSREF_stories_characters",
-        column_names = ["name", "story_id", "character_id", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER REFERENCES stories(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
+    # Creating this manually as its something linked to itself
+    handler.table_create(
+        tablename = "Relationships",
+        column_names = ["character1_id", "character2_id", "description"],
+        column_types = ["INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
     )
 
-    db.create_table(
-        name = "CROSSREF_relationships",
-        column_names = ["name", "character1_id", "character2_id", "description"],
-        column_types = ["VARCHAR(255)", "INTEGER REFERENCES characters(id)", "INTEGER REFERENCES characters(id)", "TEXT"],
+    # Stories to characters
+    handler.crossref_create(
+        tablename1="stories",
+        tablename2="characters",
     )
+
 
 # # Template
-# db.create_table(
-#     name = "",
+# handler.table_create(
+#     tablename = "",
 #     column_names = ["", ""],
 #     column_types = ["", ""],
 # )

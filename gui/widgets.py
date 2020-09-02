@@ -43,14 +43,11 @@ from PyQt5.QtGui import (
     QIcon,
     )
 
-from source.database import (
-    Database,
-    Table,
-    Record,
-)
+from sqlitemanager.handler import SQLiteHandler
+
 
 class RecordLayout(QGridLayout):
-    def __init__(self, record, database):
+    def __init__(self, mainwindow):
         super().__init__()
 
         """
@@ -58,67 +55,74 @@ class RecordLayout(QGridLayout):
         keeps track of the widgets for easy manipulation
         """
 
-        self.database = database
-        self.record = record
+        self.mainwindow = mainwindow
+        # self.database = database ----------- self.mainwindow.handler.database
+        # self.record = record --------------- self.mainwindow.record_selected
         self.widgets = []
         self.build_layout()
 
     def build_layout(self):
 
         self.build_detailbox()
-        self.build_childrenbox()
-        self.build_xrefbox()
+        # self.build_childrenbox()
+        # self.build_xrefbox()
 
     def build_detailbox(self):
 
         box = QGridLayout()
-        table = self.record.table
+        table = self.mainwindow.table_selected
         # print(f"table = {table}")
 
-        recordarray = self.record.recordarray
+        recordarray = self.mainwindow.record_selected.recordarray
         # print(f"recordarray = {recordarray}")
 
         for index, columntype in enumerate(table.column_types):
 
+            columnname = table.column_names[index]
+
             # set title for widget
             widget_title = QLabel()
-            widget_title.setText(table.column_names[index])
+            widget_title.setText(columnname)
 
             # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
             fkfound = False
-            print(f"columntype.upper = {columntype.upper()}")
+            # print(f"columntype.upper = {columntype.upper()}")
             if "REFERENCES" in columntype.upper():
                 fkfound = True
-
+                print(f"index {index} and recordarray {recordarray}, found foreign key {columntype}")
                 widget_value = QComboBox()
 
-                columnname = table.column_names[index]
-                foreign_valuepairs = self.record.table.readForeignValues(column=columnname)
+                # get the actual records of the foreign table
+                foreign_records = self.mainwindow.handler.table_get_foreign_records(tablename=table.name, column=columnname)
 
-                zero_valuepair = [0, f"No {table.column_names[index]}"]
-                valuepairs = [zero_valuepair] + foreign_valuepairs
-                # print(f"valuepairs including no choice {valuepairs}")
+                # Create first row for a no choice option
+                widget_value.addItem(f"No {columnname}", 0)
 
-                for indexvp, valuepair in enumerate(valuepairs):
-                    # print(f"indexvp {indexvp}, valuepair {valuepair}")
-                    foreign_id = valuepair[0]
-                    foreign_name = valuepair[1]
+                # get the id and name column of the foreign records
+                for record_index, foreign_record in enumerate(foreign_records):
+                    foreign_id = foreign_record.primarykey
+                    foreign_name = foreign_record.recorddict["name"]
+
+                    # add item with both a shown string (1) as well as a piece of data (2)
                     widget_value.addItem(foreign_name, foreign_id)
+
+                    # below sets itemdata at a certain point (1), data itself (2) and what its used for (3)
+                    # including the no choice, the actual combo index is plus 1
                     widget_tooltip = f"tooltip {foreign_name}"
-                    widget_value.setItemData(indexvp, widget_tooltip, Qt.ToolTipRole)
+                    widget_value.setItemData(record_index + 1, widget_tooltip, Qt.ToolTipRole)
                     # print(f"added {foreign_name} with {foreign_id}")
 
                     if recordarray[index] == foreign_id:
                         # setting the default value and the tooltip for the combobox itself
                         # print(f"record shows value {recordarray[index]}")
-                        widget_value.setCurrentIndex(indexvp)
+                        widget_value.setCurrentIndex(record_index + 1)
                         widget_value.setToolTip(widget_tooltip)
 
             # if fkfound is true then it was a foreign key and the widget is already made
             if fkfound == False:
                 ctype = columntype.split(' ', 1)[0].upper()
                 # print(f"ctype = {ctype}")
-
+                print(f"index {index} and recordarray {recordarray}")
                 if ctype == "INTEGER":
                     widget_value = QSpinBox()
                     widget_value.setMinimum(-1)
@@ -167,12 +171,12 @@ class RecordLayout(QGridLayout):
                 if table.column_names[index] == "name":
                     widget_value.setFocusPolicy(Qt.StrongFocus)
 
-            # print(f"column placements are {table.column_placement}")
-            # print(f"column placements[index] are {table.column_placement[index]}")
-            row = table.column_placement[index][0]
-            column = table.column_placement[index][1] + 1
-            heigth = table.column_placement[index][2]
-            width = table.column_placement[index][3]
+            # print(f"column placements are {table.column_placements}")
+            # print(f"column placements[index] are {table.column_placements[index]}")
+            row = table.column_placements[index][0]
+            column = table.column_placements[index][1] + 1
+            heigth = table.column_placements[index][2]
+            width = table.column_placements[index][3]
 
             # add widget and title to the layout
             box.addWidget(widget_value, row, column, heigth, width)
@@ -196,26 +200,26 @@ class RecordLayout(QGridLayout):
         """
         box = QVBoxLayout()
 
-        for table in self.database.tables:
-            reference_text = f"{self.record.table.name}(id)"
-            for ctype in table.column_types:
-                ctypesplit = ctype.split("_", 3)
-                try:
-                    if ctypesplit[2] == reference_text:
-                        widget = QLabel()
-                        widget.setText(f"child found as {reference_text} in {table}")
-                        box.addWidget(widget)
+        # for table in self.mainwindow.handler.database.tables:
+        #     reference_text = f"{self.mainwindow.table_selected.name}(id)"
+        #     for ctype in table.column_types:
+        #         ctypesplit = ctype.split("_", 3)
+        #         try:
+        #             if ctypesplit[2] == reference_text:
+        #                 widget = QLabel()
+        #                 widget.setText(f"child found as {reference_text} in {table}")
+        #                 box.addWidget(widget)
 
-                        # add the value widget to the list of widgets for easy access of values
-                        self.childwidgets.append(widget)
+        #                 # add the value widget to the list of widgets for easy access of values
+        #                 self.childwidgets.append(widget)
 
-                except:
-                    pass           
+        #         except:
+        #             pass           
 
         # finish window
         frame = QFrame()
         frame.setLayout(box)
-        self.addWidget(frame, 0,1,1,1)
+        self.addWidget(frame, 0,9,1,1)
 
     def build_xrefbox(self):
 
@@ -226,7 +230,7 @@ class RecordLayout(QGridLayout):
         # finish window
         frame = QFrame()
         frame.setLayout(box)
-        self.addWidget(frame, 1,1,1,1)
+        self.addWidget(frame, 1,9,1,1)
 
     def processValues(self):
         """
@@ -234,19 +238,21 @@ class RecordLayout(QGridLayout):
         """
 
         widgets = self.widgets
-        table = self.record.table
+        table = self.mainwindow.table_selected
+        record = self.mainwindow.record_selected
 
         recordarray = []
         for index, columntype in enumerate(table.column_types):
-
+            
             # check if column is a foreign key, it needs at least 3 text fields between spaces (column name, fk denotion, fk column)
             fkfound = False
 
             split = columntype.split(' ', 3)
             # print(f"split {split}")
 
+            cname = table.column_names[index]
+
             if len(split) == 3:
-                cname = self.record.table.column_names[index]
                 creferences = split[1]
                 cforeign = split[2]
                 
@@ -254,7 +260,7 @@ class RecordLayout(QGridLayout):
                     fkfound = True
                     currentindex = widgets[index].currentIndex()
                     currentid = widgets[index].itemData(currentindex)
-                    print(f"itemindex {currentindex} and itemdata {currentid}")
+                    # print(f"itemindex {currentindex} and itemdata {currentid}")
                     recordarray.append(currentid)
 
             if fkfound == False:
@@ -262,11 +268,9 @@ class RecordLayout(QGridLayout):
                 # print(f"ctype = {ctype}")
 
                 if ctype == "VARCHAR(255)":
-                    string = self.processText(widgets[index].text())
-                    recordarray.append(string)
+                    recordarray.append(widgets[index].text())
                 elif ctype == "TEXT":
-                    string = self.processText(widgets[index].toPlainText())
-                    recordarray.append(string)
+                    recordarray.append(widgets[index].toPlainText())
                 elif ctype == "INTEGER":
                     recordarray.append(widgets[index].value())
                 elif ctype == "DATE":
@@ -276,24 +280,12 @@ class RecordLayout(QGridLayout):
 
             # print(f"recordarray building {recordarray}")
         # print(f"recordarray processed {recordarray}")
-        record = Record(
-            table = table,
+        record = self.mainwindow.handler.record_create(
+            tablename = table.name,
             recordarray = recordarray,
         )
 
         return record
-
-    def processText(self, string):
-        
-        string = f"""{string}"""
-        
-        # escaping double quotes
-        string.replace('"', '\\"')
-
-        # escaping single quotes
-        string.replace("'", "\\'")
-
-        return string
 
 class RecordTableDialog(QDialog):
     def __init__(self, mainwindow):
@@ -313,7 +305,7 @@ class RecordTableDialog(QDialog):
         """)
 
         self.column_names = QLineEdit(self)
-        self.column_names.setText("ordering, name, description, active, characterid")
+        self.column_names.setText("number, title, description, active, character_id")
         self.column_names.setToolTip("Input column names as a list of strings: 'col1, col2, col3, col4'.")
 
         self.column_types = QLineEdit(self)
@@ -330,12 +322,12 @@ class RecordTableDialog(QDialog):
         and one can choose from a list of characters when creating a record.
         """)
 
-        self.column_placement = QLineEdit(self)
-        self.column_placement.setDisabled(True)
-        self.column_placement.setToolTip("Not implemented: row, column, height, widt: [[1,0,1,1], [2,0,1,1], [3,0,1,1], [4,0,10,1]].")
+        self.column_placements = QLineEdit(self)
+        self.column_placements.setDisabled(True)
+        self.column_placements.setToolTip("Not implemented: row, column, height, widt: [[1,0,1,1], [2,0,1,1], [3,0,1,1], [4,0,10,1]].")
 
         self.defaults = QLineEdit(self)
-        self.defaults.setToolTip("""Insert default values: '0, "", "", True'.""")
+        self.defaults.setToolTip("""Insert default values: '0, "", "", True'""")
 
         self.linkbutton = QPushButton()
         self.linkbutton.setText("Link to other table")
@@ -349,7 +341,7 @@ class RecordTableDialog(QDialog):
         layout.addRow("Record name", self.recordname)
         layout.addRow("Column names", self.column_names)
         layout.addRow("Column types", self.column_types)
-        layout.addRow("Column Placements", self.column_placement)
+        layout.addRow("Column Placements", self.column_placements)
         layout.addRow("Default values", self.defaults)
 
         layout.addWidget(buttonBox)
@@ -362,12 +354,12 @@ class RecordTableDialog(QDialog):
 
     def createTable(self):
 
-        table = self.mainwindow.database.create_table(
-            name = self.name.text(),
+        table = self.mainwindow.handler.table_create(
+            tablename = self.name.text(),
             record_name = self.recordname.text(),
             column_names = self.column_names.text().split(', '),
             column_types = self.column_types.text().split(', '),
-            column_placement = self.column_placement.text().split(', '),
+            column_placements = self.column_placements.text().split(', '),
             defaults = self.defaults.text().split(', '),
             )
 
