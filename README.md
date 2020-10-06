@@ -52,17 +52,17 @@ pip3 install --user pyinstaller         # (dev) to create an installer for deskt
 #### Windows 10 (64bit)
 directory
 ```
-python -m PyInstaller cli.py --icon="gui\warhammer_icon.ico" --name WAM-Win10-64-major-minor-patch-ext
+python -m PyInstaller cli.py --name OWB-Win10-64-major-minor-patch-ext
 ```
 
 #### Ubuntu 18 (64bit)
 appimage
 ```
-pyinstaller -F cli.py --name WAM-Ubuntu18-64-major-minor-patch-ext
+pyinstaller -F cli.py --name OWB-Ubuntu18-64-major-minor-patch-ext
 ```
 directory
 ```
-pyinstaller cli.py --name WAM-Ubuntu18-64-major-minor-patch-ext
+pyinstaller cli.py --name OWB-Ubuntu18-64-major-minor-patch-ext
 ```
 
 ### create a distribution from spec file with 
