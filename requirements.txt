@@ -1,6 +1,6 @@
 ###### Requirements without Version Specifiers ######`
 pyqt5
-pyqt-guidarktheme
+pyqt-darktheme
 sqlitemanager
 
 ###### Requirements with Version Specifiers ######`
