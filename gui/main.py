@@ -42,7 +42,7 @@ import sys
 #     QIcon,
 #     )
     
-from guidarktheme.widget_template import DarkApplication
+from darktheme.widget_template import DarkApplication
 # from guidarktheme.decorators import Decorators
 
 # from sqlitemanager.handler import SQLiteHandler
