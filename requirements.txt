@@ -1,5 +1,5 @@
 ###### Requirements without Version Specifiers ######`
-pyqt5
+pyqt6
 pyqt-darktheme
 sqlitemanager
 
